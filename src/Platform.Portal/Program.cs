@@ -7,6 +7,9 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Usa solo HTTPS sulla porta 5001
+builder.WebHost.UseUrls("https://localhost:5001");
+
 // Configura Serilog
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
@@ -68,7 +71,7 @@ builder.Services.AddHttpsRedirection(options =>
 
 var app = builder.Build();
 
-// Seed del database
+// Seed del database - CREA AUTOMATICAMENTE IL DB
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -78,11 +81,26 @@ using (var scope = app.Services.CreateScope())
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
         
+        // CREA IL DATABASE SE NON ESISTE
+        Log.Information("Verifica esistenza database...");
+        var created = context.Database.EnsureCreated();
+        if (created)
+        {
+            Log.Information("Database creato con successo!");
+        }
+        else
+        {
+            Log.Information("Database già esistente");
+        }
+        
+        // Inizializza dati di default
         await DbInitializer.Initialize(context, userManager, roleManager);
+        Log.Information("Inizializzazione database completata");
     }
     catch (Exception ex)
     {
         Log.Error(ex, "Errore durante l'inizializzazione del database");
+        // NON FERMARE L'APP, continua comunque
     }
 }
 
