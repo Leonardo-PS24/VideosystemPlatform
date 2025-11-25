@@ -1,99 +1,82 @@
+@model List<Platform.Portal.Controllers.ApplicationInfo>
+
 @{
     ViewData["Title"] = "Dashboard";
-    ViewData["Subtitle"] = "Benvenuto nella piattaforma Videosystem";
+    ViewData["Subtitle"] = "Benvenuto nella piattaforma interna Videosystem";
 }
 
-<!-- Statistiche in alto -->
-<div class="row g-3 mb-4">
+<!-- Statistiche -->
+<div class="row g-4 mb-4 fade-in">
     <div class="col-md-3">
         <div class="stat-card">
-            <div class="stat-icon bg-success">
+            <div class="stat-icon green">
                 <span class="material-icons">apps</span>
             </div>
-            <div class="stat-content">
-                <h3 class="stat-value">@Model.Count()</h3>
-                <p class="stat-label">Applicazioni Disponibili</p>
-            </div>
+            <div class="stat-value">@(Model?.Count ?? 0)</div>
+            <div class="stat-label">Applicazioni Disponibili</div>
         </div>
     </div>
     
     <div class="col-md-3">
         <div class="stat-card">
-            <div class="stat-icon bg-primary">
+            <div class="stat-icon blue">
                 <span class="material-icons">people</span>
             </div>
-            <div class="stat-content">
-                <h3 class="stat-value">-</h3>
-                <p class="stat-label">Utenti Attivi</p>
-            </div>
+            <div class="stat-value">--</div>
+            <div class="stat-label">Utenti Attivi</div>
         </div>
     </div>
     
     <div class="col-md-3">
         <div class="stat-card">
-            <div class="stat-icon bg-warning">
-                <span class="material-icons">access_time</span>
+            <div class="stat-icon orange">
+                <span class="material-icons">schedule</span>
             </div>
-            <div class="stat-content">
-                <h3 class="stat-value">@DateTime.Now.ToString("HH:mm")</h3>
-                <p class="stat-label">Ora Corrente</p>
-            </div>
+            <div class="stat-value" id="currentTime">--:--</div>
+            <div class="stat-label">Ora Corrente</div>
         </div>
     </div>
     
     <div class="col-md-3">
         <div class="stat-card">
-            <div class="stat-icon bg-info">
-                <span class="material-icons">update</span>
+            <div class="stat-icon green">
+                <span class="material-icons">check_circle</span>
             </div>
-            <div class="stat-content">
-                <h3 class="stat-value">100%</h3>
-                <p class="stat-label">Sistema Online</p>
-            </div>
+            <div class="stat-value">100%</div>
+            <div class="stat-label">Sistema Online</div>
         </div>
     </div>
 </div>
 
 <!-- Applicazioni -->
-@if (Model.Any())
+@if (Model != null && Model.Any())
 {
-    <div class="section-header mb-3">
-        <h2 class="section-title">
-            <span class="material-icons align-middle">apps</span>
-            Le Tue Applicazioni
-        </h2>
-        <p class="section-description">Accedi alle applicazioni aziendali disponibili</p>
-    </div>
-    
-    <div class="row g-4">
+    <div class="row g-4 mb-4">
         @foreach (var app in Model)
         {
-            <div class="col-md-4">
+            <div class="col-md-6 col-lg-4 fade-in fade-in-delay-@(Model.IndexOf(app) + 1)">
                 <div class="app-card">
                     <div class="app-card-header">
-                        <div class="app-icon">
+                        <div class="app-card-icon">
                             <span class="material-icons">@app.Icon</span>
                         </div>
-                        @if (!string.IsNullOrEmpty(app.Badge))
-                        {
-                            <span class="badge bg-success">@app.Badge</span>
-                        }
+                        <h5 class="app-card-title">@app.Name</h5>
                     </div>
                     <div class="app-card-body">
-                        <h3 class="app-title">@app.Name</h3>
-                        <p class="app-description">@app.Description</p>
-                        
-                        @if (app.RequiredRoles != null && app.RequiredRoles.Any())
+                        <p class="app-card-description">@app.Description</p>
+                        @if (!string.IsNullOrEmpty(app.RequiredRole))
                         {
-                            <div class="app-roles">
-                                <span class="material-icons">verified_user</span>
-                                <small>Richiede: @string.Join(", ", app.RequiredRoles)</small>
+                            <div class="mb-3">
+                                <span class="badge bg-secondary">
+                                    <span class="material-icons align-middle" style="font-size: 14px;">security</span>
+                                    @app.RequiredRole
+                                </span>
                             </div>
                         }
                     </div>
                     <div class="app-card-footer">
-                        <a href="@app.Url" class="btn btn-primary btn-sm">
-                            <span class="material-icons">launch</span>
+                        <a href="@app.Url" class="btn btn-primary w-100" target="_blank">
+                            <span class="material-icons">open_in_new</span>
                             Apri Applicazione
                         </a>
                     </div>
@@ -104,83 +87,98 @@
 }
 else
 {
-    <div class="empty-state">
+    <div class="empty-state fade-in">
         <div class="empty-state-icon">
-            <span class="material-icons">apps</span>
+            <span class="material-icons">inbox</span>
         </div>
         <h3 class="empty-state-title">Nessuna Applicazione Disponibile</h3>
         <p class="empty-state-description">
-            Al momento non ci sono applicazioni configurate. <br>
-            Le nuove applicazioni appariranno qui non appena saranno disponibili.
+            Al momento non ci sono applicazioni configurate.<br />
+            Contatta l'amministratore per maggiori informazioni.
         </p>
-        @if (User.IsInRole("Admin"))
-        {
-            <p class="text-muted mt-3">
-                <span class="material-icons align-middle">info</span>
-                <small>Le applicazioni possono essere configurate nel file <code>appsettings.json</code></small>
-            </p>
-        }
     </div>
 }
 
-<!-- Informazioni Rapide -->
-<div class="row mt-5">
-    <div class="col-md-8">
-        <div class="info-card">
-            <div class="info-card-header">
-                <h3>
-                    <span class="material-icons">info</span>
+<!-- Info Card -->
+<div class="row g-4">
+    <div class="col-md-6 fade-in">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title d-flex align-items-center mb-3">
+                    <span class="material-icons text-vs-green me-2">info</span>
                     Informazioni Piattaforma
-                </h3>
-            </div>
-            <div class="info-card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="info-item">
-                            <span class="material-icons text-success">check_circle</span>
-                            <div>
-                                <strong>Versione</strong>
-                                <p class="mb-0">1.0.0</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="info-item">
-                            <span class="material-icons text-success">cloud_done</span>
-                            <div>
-                                <strong>Stato Sistema</strong>
-                                <p class="mb-0">Operativo</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                </h5>
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <strong>Versione:</strong> 1.0.0
+                    </li>
+                    <li class="mb-2">
+                        <strong>Ambiente:</strong> @(System.Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production")
+                    </li>
+                    <li class="mb-2">
+                        <strong>Stato:</strong> <span class="badge bg-success">Operativo</span>
+                    </li>
+                    <li>
+                        <strong>Ultimo aggiornamento:</strong> 25/11/2024
+                    </li>
+                </ul>
             </div>
         </div>
     </div>
     
-    <div class="col-md-4">
-        <div class="quick-actions-card">
-            <h3 class="mb-3">
-                <span class="material-icons">flash_on</span>
-                Azioni Rapide
-            </h3>
-            <div class="d-grid gap-2">
-                @if (User.IsInRole("Admin"))
-                {
-                    <a asp-controller="Admin" asp-action="Users" class="btn btn-outline-primary">
-                        <span class="material-icons">people</span>
-                        Gestisci Utenti
-                    </a>
-                    <a asp-controller="Admin" asp-action="CreateUser" class="btn btn-outline-success">
-                        <span class="material-icons">person_add</span>
-                        Nuovo Utente
-                    </a>
-                }
-                <button type="button" class="btn btn-outline-secondary" onclick="location.reload()">
-                    <span class="material-icons">refresh</span>
-                    Aggiorna Pagina
-                </button>
+    @if (User.IsInRole("Admin"))
+    {
+        <div class="col-md-6 fade-in fade-in-delay-1">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title d-flex align-items-center mb-3">
+                        <span class="material-icons text-vs-green me-2">admin_panel_settings</span>
+                        Quick Actions
+                    </h5>
+                    <div class="d-grid gap-2">
+                        <a asp-controller="Admin" asp-action="Users" class="btn btn-outline-primary">
+                            <span class="material-icons align-middle">people</span>
+                            Gestisci Utenti
+                        </a>
+                        <a asp-controller="Admin" asp-action="CreateUser" class="btn btn-outline-success">
+                            <span class="material-icons align-middle">person_add</span>
+                            Nuovo Utente
+                        </a>
+                        <button onclick="location.reload()" class="btn btn-outline-secondary">
+                            <span class="material-icons align-middle">refresh</span>
+                            Aggiorna Pagina
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
+    }
 </div>
+
+@section Scripts {
+    <script>
+        // Aggiorna ora corrente ogni secondo
+        function updateTime() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('currentTime').textContent = `${hours}:${minutes}`;
+        }
+        
+        updateTime();
+        setInterval(updateTime, 60000); // Aggiorna ogni minuto
+        
+        // Animazione card al caricamento
+        const cards = document.querySelectorAll('.app-card, .stat-card');
+        cards.forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            
+            setTimeout(() => {
+                card.style.transition = 'all 0.6s ease-out';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, index * 100);
+        });
+    </script>
+}

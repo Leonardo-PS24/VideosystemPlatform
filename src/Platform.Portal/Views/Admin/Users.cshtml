@@ -1,318 +1,309 @@
-@model IEnumerable<Platform.Portal.Models.ApplicationUser>
+@model List<UserListViewModel>
 
 @{
     ViewData["Title"] = "Gestione Utenti";
-    ViewData["Subtitle"] = "Amministra gli utenti della piattaforma";
+    ViewData["Subtitle"] = "Gestisci gli utenti della piattaforma";
 }
 
 @section HeaderActions {
-    <a asp-action="CreateUser" class="btn btn-success">
-        <span class="material-icons align-middle me-1">person_add</span>
+    <a asp-action="CreateUser" class="btn btn-videosystem">
+        <span class="material-icons">person_add</span>
         Nuovo Utente
     </a>
 }
 
-<!-- Filtri e Ricerca -->
-<div class="row mb-4">
-    <div class="col-md-6">
-        <div class="input-group">
-            <span class="input-group-text bg-white border-end-0">
-                <span class="material-icons">search</span>
-            </span>
-            <input type="text" id="searchInput" class="form-control border-start-0" placeholder="Cerca utente per nome, email o username...">
+<!-- Statistiche Utenti -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon blue">
+                <span class="material-icons">people</span>
+            </div>
+            <div class="stat-value" id="totalUsers">@Model.Count</div>
+            <div class="stat-label">Utenti Totali</div>
         </div>
     </div>
+    
     <div class="col-md-3">
-        <select id="roleFilter" class="form-select">
-            <option value="">Tutti i ruoli</option>
-            <option value="Admin">Amministratori</option>
-            <option value="User">Utenti</option>
-        </select>
+        <div class="stat-card">
+            <div class="stat-icon green">
+                <span class="material-icons">check_circle</span>
+            </div>
+            <div class="stat-value" id="activeUsers">@Model.Count(u => u.IsActive)</div>
+            <div class="stat-label">Utenti Attivi</div>
+        </div>
     </div>
+    
     <div class="col-md-3">
-        <select id="statusFilter" class="form-select">
-            <option value="">Tutti gli stati</option>
-            <option value="active">Attivi</option>
-            <option value="inactive">Disattivati</option>
-        </select>
+        <div class="stat-card">
+            <div class="stat-icon red">
+                <span class="material-icons">admin_panel_settings</span>
+            </div>
+            <div class="stat-value" id="adminUsers">@Model.Count(u => u.Role == "Admin")</div>
+            <div class="stat-label">Amministratori</div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon orange">
+                <span class="material-icons">block</span>
+            </div>
+            <div class="stat-value" id="inactiveUsers">@Model.Count(u => !u.IsActive)</div>
+            <div class="stat-label">Disattivati</div>
+        </div>
     </div>
 </div>
 
-<!-- Statistiche Rapide -->
-<div class="row g-3 mb-4">
-    <div class="col-md-3">
-        <div class="stat-card">
-            <div class="stat-icon bg-primary">
-                <span class="material-icons">people</span>
+<!-- Filtri -->
+<div class="filters-card">
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="filter-group">
+                <label for="searchInput" class="form-label">
+                    <span class="material-icons align-middle" style="font-size: 16px;">search</span>
+                    Ricerca
+                </label>
+                <input type="text" id="searchInput" class="form-control" placeholder="Cerca per username, email o nome..." onkeyup="filterTable()">
             </div>
-            <div class="stat-content">
-                <h3 class="stat-value" id="totalUsers">@Model.Count()</h3>
-                <p class="stat-label">Utenti Totali</p>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="filter-group">
+                <label for="roleFilter" class="form-label">
+                    <span class="material-icons align-middle" style="font-size: 16px;">admin_panel_settings</span>
+                    Ruolo
+                </label>
+                <select id="roleFilter" class="form-select" onchange="filterTable()">
+                    <option value="">Tutti i ruoli</option>
+                    <option value="Admin">Admin</option>
+                    <option value="User">User</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="filter-group">
+                <label for="statusFilter" class="form-label">
+                    <span class="material-icons align-middle" style="font-size: 16px;">toggle_on</span>
+                    Stato
+                </label>
+                <select id="statusFilter" class="form-select" onchange="filterTable()">
+                    <option value="">Tutti gli stati</option>
+                    <option value="active">Attivi</option>
+                    <option value="inactive">Disattivati</option>
+                </select>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="stat-card">
-            <div class="stat-icon bg-success">
-                <span class="material-icons">check_circle</span>
-            </div>
-            <div class="stat-content">
-                <h3 class="stat-value" id="activeUsers">@Model.Count(u => u.IsActive)</h3>
-                <p class="stat-label">Utenti Attivi</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="stat-card">
-            <div class="stat-icon bg-warning">
-                <span class="material-icons">admin_panel_settings</span>
-            </div>
-            <div class="stat-content">
-                <h3 class="stat-value" id="adminUsers">-</h3>
-                <p class="stat-label">Amministratori</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="stat-card">
-            <div class="stat-icon bg-danger">
-                <span class="material-icons">block</span>
-            </div>
-            <div class="stat-content">
-                <h3 class="stat-value" id="inactiveUsers">@Model.Count(u => !u.IsActive)</h3>
-                <p class="stat-label">Disattivati</p>
-            </div>
+    
+    <div class="row mt-3">
+        <div class="col">
+            <small class="text-muted">
+                <span class="material-icons align-middle" style="font-size: 14px;">info</span>
+                <span id="resultCount">@Model.Count</span> risultati trovati
+            </small>
         </div>
     </div>
 </div>
 
 <!-- Tabella Utenti -->
 <div class="table-card">
-    <div class="table-card-header">
-        <h3>
-            <span class="material-icons align-middle me-2">people</span>
-            Elenco Utenti
-        </h3>
-        <span class="badge bg-secondary" id="resultCount">@Model.Count() utenti</span>
-    </div>
-    <div class="table-responsive">
-        <table class="table table-hover mb-0" id="usersTable">
-            <thead>
-                <tr>
-                    <th>
-                        <span class="material-icons align-middle me-1" style="font-size: 18px;">person</span>
-                        Utente
-                    </th>
-                    <th>
-                        <span class="material-icons align-middle me-1" style="font-size: 18px;">email</span>
-                        Email
-                    </th>
-                    <th>
-                        <span class="material-icons align-middle me-1" style="font-size: 18px;">badge</span>
-                        Ruolo
-                    </th>
-                    <th>
-                        <span class="material-icons align-middle me-1" style="font-size: 18px;">toggle_on</span>
-                        Stato
-                    </th>
-                    <th>
-                        <span class="material-icons align-middle me-1" style="font-size: 18px;">event</span>
-                        Creato
-                    </th>
-                    <th class="text-end">
-                        <span class="material-icons align-middle me-1" style="font-size: 18px;">settings</span>
-                        Azioni
-                    </th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var user in Model.OrderByDescending(u => u.CreatedAt))
-                {
-                    <tr data-user-id="@user.Id" data-username="@user.UserName" data-email="@user.Email" data-fullname="@user.FullName" data-role="@(user.UserName == "admin" ? "Admin" : "User")" data-status="@(user.IsActive ? "active" : "inactive")">
-                        <td>
-                            <div class="d-flex align-items-center">
-                                <div class="user-avatar-sm me-2">
-                                    <span class="material-icons">account_circle</span>
-                                </div>
-                                <div>
-                                    <div class="fw-bold">@user.FullName</div>
-                                    <small class="text-muted">@("@" + user.UserName)</small>
-                                </div>
-                            </div>
-                        </td>
-                        <td>
-                            <span class="material-icons align-middle text-muted" style="font-size: 16px;">email</span>
-                            @user.Email
-                        </td>
-                        <td>
-                            @if (user.UserName == "admin")
-                            {
-                                <span class="badge bg-danger">
-                                    <span class="material-icons align-middle" style="font-size: 14px;">admin_panel_settings</span>
-                                    Admin
-                                </span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-primary">
-                                    <span class="material-icons align-middle" style="font-size: 14px;">person</span>
-                                    User
-                                </span>
-                            }
-                        </td>
-                        <td>
-                            @if (user.IsActive)
-                            {
-                                <span class="badge bg-success">
-                                    <span class="material-icons align-middle" style="font-size: 14px;">check_circle</span>
-                                    Attivo
-                                </span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-secondary">
-                                    <span class="material-icons align-middle" style="font-size: 14px;">block</span>
-                                    Disattivato
-                                </span>
-                            }
-                        </td>
-                        <td>
-                            <span class="text-muted">@user.CreatedAt.ToString("dd/MM/yyyy")</span>
-                        </td>
-                        <td class="text-end">
-                            <div class="btn-group" role="group">
-                                <a asp-action="EditUser" asp-route-id="@user.Id" class="btn btn-sm btn-outline-primary" title="Modifica">
-                                    <span class="material-icons" style="font-size: 18px;">edit</span>
-                                </a>
-                                
-                                @if (user.UserName != User.Identity.Name)
-                                {
-                                    <form asp-action="ToggleUserStatus" asp-route-id="@user.Id" method="post" class="d-inline">
-                                        @Html.AntiForgeryToken()
-                                        <button type="submit" class="btn btn-sm btn-outline-warning" title="@(user.IsActive ? "Disattiva" : "Attiva")">
-                                            <span class="material-icons" style="font-size: 18px;">@(user.IsActive ? "block" : "check_circle")</span>
-                                        </button>
-                                    </form>
-                                    
-                                    <button type="button" class="btn btn-sm btn-outline-danger" title="Elimina" 
-                                            onclick="confirmDelete('@user.Id', '@user.UserName')">
-                                        <span class="material-icons" style="font-size: 18px;">delete</span>
-                                    </button>
-                                }
-                                else
-                                {
-                                    <button class="btn btn-sm btn-outline-secondary" disabled title="Non puoi modificare te stesso">
-                                        <span class="material-icons" style="font-size: 18px;">lock</span>
-                                    </button>
-                                }
-                            </div>
-                        </td>
+    <div class="table-card-body">
+        <div class="table-responsive">
+            <table class="table" id="usersTable">
+                <thead>
+                    <tr>
+                        <th>Utente</th>
+                        <th>Email</th>
+                        <th>Nome Completo</th>
+                        <th>Ruolo</th>
+                        <th>Stato</th>
+                        <th>Data Creazione</th>
+                        <th class="text-end">Azioni</th>
                     </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-</div>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Any())
+                    {
+                        @foreach (var user in Model)
+                        {
+                            <tr data-username="@user.Username.ToLower()" 
+                                data-email="@user.Email.ToLower()" 
+                                data-fullname="@user.FullName.ToLower()"
+                                data-role="@user.Role" 
+                                data-status="@(user.IsActive ? "active" : "inactive")">
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="user-avatar-table">
+                                            @user.Username.Substring(0, 1).ToUpper()
+                                        </div>
+                                        <strong>@user.Username</strong>
+                                    </div>
+                                </td>
+                                <td>@user.Email</td>
+                                <td>@user.FullName</td>
+                                <td>
+                                    <span class="badge @(user.Role == "Admin" ? "bg-danger" : "bg-primary")">
+                                        @user.Role
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (user.IsActive)
+                                    {
+                                        <span class="badge bg-success">
+                                            <span class="material-icons align-middle" style="font-size: 14px;">check_circle</span>
+                                            Attivo
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">
+                                            <span class="material-icons align-middle" style="font-size: 14px;">cancel</span>
+                                            Disattivato
+                                        </span>
+                                    }
+                                </td>
+                                <td>@user.CreatedAt.ToString("dd/MM/yyyy")</td>
+                                <td class="text-end">
+                                    <div class="btn-group" role="group">
+                                        <a asp-action="EditUser" asp-route-id="@user.Id" 
+                                           class="btn btn-sm btn-outline-primary" 
+                                           title="Modifica">
+                                            <span class="material-icons" style="font-size: 16px;">edit</span>
+                                        </a>
+                                        
+                                        <form asp-action="ToggleUserStatus" asp-route-id="@user.Id" 
+                                              method="post" class="d-inline">
+                                            <button type="submit" 
+                                                    class="btn btn-sm btn-outline-warning" 
+                                                    title="@(user.IsActive ? "Disattiva" : "Attiva")">
+                                                <span class="material-icons" style="font-size: 16px;">
+                                                    @(user.IsActive ? "block" : "check_circle")
+                                                </span>
+                                            </button>
+                                        </form>
+                                        
+                                        @if (user.Username != User.Identity!.Name)
+                                        {
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-outline-danger" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#deleteModal-@user.Id"
+                                                    title="Elimina">
+                                                <span class="material-icons" style="font-size: 16px;">delete</span>
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
 
-<!-- Modal Conferma Eliminazione -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">
-                    <span class="material-icons align-middle me-2">warning</span>
-                    Conferma Eliminazione
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Sei sicuro di voler eliminare l'utente <strong id="deleteUsername"></strong>?</p>
-                <p class="text-danger mb-0">
-                    <span class="material-icons align-middle">info</span>
-                    <strong>Questa azione non può essere annullata!</strong>
-                </p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
-                <form id="deleteForm" asp-action="DeleteUser" method="post" class="d-inline">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" id="deleteUserId" name="id" />
-                    <button type="submit" class="btn btn-danger">
-                        <span class="material-icons align-middle me-1">delete</span>
-                        Elimina Utente
-                    </button>
-                </form>
-            </div>
+                            <!-- Modal di conferma eliminazione -->
+                            <div class="modal fade" id="deleteModal-@user.Id" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Conferma Eliminazione</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="alert alert-warning">
+                                                <span class="material-icons align-middle">warning</span>
+                                                <strong>Attenzione!</strong> Questa azione non può essere annullata.
+                                            </div>
+                                            Sei sicuro di voler eliminare l'utente <strong>@user.Username</strong>?
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                <span class="material-icons align-middle">close</span>
+                                                Annulla
+                                            </button>
+                                            <form asp-action="DeleteUser" asp-route-id="@user.Id" method="post" class="d-inline">
+                                                <button type="submit" class="btn btn-danger">
+                                                    <span class="material-icons align-middle">delete</span>
+                                                    Elimina
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center py-5">
+                                <div class="empty-state">
+                                    <div class="empty-state-icon">
+                                        <span class="material-icons">person_off</span>
+                                    </div>
+                                    <h5 class="empty-state-title">Nessun Utente Trovato</h5>
+                                    <p class="empty-state-description">Non ci sono utenti da visualizzare.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 
 @section Scripts {
     <script>
-        // Filtro Ricerca
-        const searchInput = document.getElementById('searchInput');
-        const roleFilter = document.getElementById('roleFilter');
-        const statusFilter = document.getElementById('statusFilter');
-        const tableRows = document.querySelectorAll('#usersTable tbody tr');
-        const resultCount = document.getElementById('resultCount');
-        
         function filterTable() {
-            const searchTerm = searchInput.value.toLowerCase();
-            const roleValue = roleFilter.value.toLowerCase();
-            const statusValue = statusFilter.value.toLowerCase();
+            const searchValue = document.getElementById('searchInput').value.toLowerCase();
+            const roleValue = document.getElementById('roleFilter').value;
+            const statusValue = document.getElementById('statusFilter').value;
+            
+            const table = document.getElementById('usersTable');
+            const rows = table.getElementsByTagName('tr');
             let visibleCount = 0;
             
-            tableRows.forEach(row => {
-                const username = row.dataset.username.toLowerCase();
-                const email = row.dataset.email.toLowerCase();
-                const fullname = row.dataset.fullname.toLowerCase();
-                const role = row.dataset.role.toLowerCase();
-                const status = row.dataset.status.toLowerCase();
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                const username = row.getAttribute('data-username') || '';
+                const email = row.getAttribute('data-email') || '';
+                const fullname = row.getAttribute('data-fullname') || '';
+                const role = row.getAttribute('data-role') || '';
+                const status = row.getAttribute('data-status') || '';
                 
-                const matchesSearch = username.includes(searchTerm) || 
-                                    email.includes(searchTerm) || 
-                                    fullname.includes(searchTerm);
-                const matchesRole = !roleValue || role === roleValue;
-                const matchesStatus = !statusValue || status === statusValue;
+                let showRow = true;
                 
-                if (matchesSearch && matchesRole && matchesStatus) {
-                    row.style.display = '';
-                    visibleCount++;
-                } else {
-                    row.style.display = 'none';
+                // Filtro ricerca
+                if (searchValue && !username.includes(searchValue) && !email.includes(searchValue) && !fullname.includes(searchValue)) {
+                    showRow = false;
                 }
-            });
+                
+                // Filtro ruolo
+                if (roleValue && role !== roleValue) {
+                    showRow = false;
+                }
+                
+                // Filtro stato
+                if (statusValue && status !== statusValue) {
+                    showRow = false;
+                }
+                
+                row.style.display = showRow ? '' : 'none';
+                if (showRow) visibleCount++;
+            }
             
-            resultCount.textContent = `${visibleCount} utenti`;
+            document.getElementById('resultCount').textContent = visibleCount;
         }
         
-        searchInput.addEventListener('input', filterTable);
-        roleFilter.addEventListener('change', filterTable);
-        statusFilter.addEventListener('change', filterTable);
-        
-        // Modal Conferma Eliminazione
-        function confirmDelete(userId, username) {
-            document.getElementById('deleteUserId').value = userId;
-            document.getElementById('deleteUsername').textContent = username;
-            const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
-            modal.show();
-        }
+        // Animazione righe al caricamento
+        const rows = document.querySelectorAll('#usersTable tbody tr');
+        rows.forEach((row, index) => {
+            row.style.opacity = '0';
+            row.style.transform = 'translateX(-20px)';
+            
+            setTimeout(() => {
+                row.style.transition = 'all 0.4s ease-out';
+                row.style.opacity = '1';
+                row.style.transform = 'translateX(0)';
+            }, index * 50);
+        });
     </script>
 }
-
-<style>
-    .user-avatar-sm {
-        width: 40px;
-        height: 40px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background-color: #f8f9fa;
-        border-radius: 50%;
-    }
-    
-    .user-avatar-sm .material-icons {
-        font-size: 28px;
-        color: #6c757d;
-    }
-</style>
