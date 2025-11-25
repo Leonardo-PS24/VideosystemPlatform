@@ -1,0 +1,68 @@
+@model List<Platform.Portal.Controllers.ApplicationInfo>
+
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="container mt-5">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="display-4">
+                <span class="material-icons align-middle" style="font-size: 3rem;">dashboard</span>
+                Benvenuto nella Videosystem Platform
+            </h1>
+            <p class="lead">Seleziona un'applicazione per iniziare</p>
+        </div>
+    </div>
+
+    @if (Model != null && Model.Any())
+    {
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            @foreach (var app in Model)
+            {
+                <div class="col">
+                    <div class="card h-100 shadow-sm app-card">
+                        <div class="card-body d-flex flex-column">
+                            <div class="mb-3">
+                                <span class="material-icons app-icon text-videosystem">@app.Icon</span>
+                            </div>
+                            <h5 class="card-title">@app.Name</h5>
+                            <p class="card-text flex-grow-1">@app.Description</p>
+                            <a href="@app.Url" class="btn btn-videosystem w-100">
+                                <span class="material-icons align-middle">open_in_new</span>
+                                Apri Applicazione
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            <span class="material-icons align-middle">info</span>
+            Nessuna applicazione disponibile al momento.
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        // Animazione delle card al caricamento
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.app-card');
+            cards.forEach((card, index) => {
+                setTimeout(() => {
+                    card.style.opacity = '0';
+                    card.style.transform = 'translateY(20px)';
+                    card.style.transition = 'all 0.3s ease';
+                    setTimeout(() => {
+                        card.style.opacity = '1';
+                        card.style.transform = 'translateY(0)';
+                    }, 50);
+                }, index * 100);
+            });
+        });
+    </script>
+}

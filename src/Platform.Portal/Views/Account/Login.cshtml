@@ -1,0 +1,78 @@
+@model LoginViewModel
+
+@{
+    ViewData["Title"] = "Login";
+    Layout = "_Layout";
+}
+
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-5">
+            <div class="card shadow">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <h2 class="text-videosystem">
+                            <span class="material-icons align-middle" style="font-size: 3rem;">lock</span>
+                        </h2>
+                        <h3>Videosystem Platform</h3>
+                        <p class="text-muted">Accedi con le tue credenziali</p>
+                    </div>
+
+                    <form asp-action="Login" method="post">
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="Username" class="form-label">
+                                <span class="material-icons align-middle">person</span>
+                                Nome utente o Email
+                            </label>
+                            <input asp-for="Username" class="form-control form-control-lg" placeholder="admin" autofocus />
+                            <span asp-validation-for="Username" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Password" class="form-label">
+                                <span class="material-icons align-middle">vpn_key</span>
+                                Password
+                            </label>
+                            <input asp-for="Password" class="form-control form-control-lg" placeholder="••••••••" />
+                            <span asp-validation-for="Password" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <input asp-for="RememberMe" class="form-check-input" />
+                            <label asp-for="RememberMe" class="form-check-label">
+                                Ricordami
+                            </label>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-videosystem btn-lg">
+                                <span class="material-icons align-middle">login</span>
+                                Accedi
+                            </button>
+                        </div>
+                    </form>
+
+                    <hr class="my-4" />
+
+                    <div class="text-center">
+                        <small class="text-muted">
+                            <strong>Credenziali di default:</strong><br />
+                            Admin: admin / Admin123!<br />
+                            User: user / User123!
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-3">
+                <small class="text-muted">© @DateTime.Now.Year Videosystem S.r.l.</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

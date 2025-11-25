@@ -1,0 +1,19 @@
+@{
+    ViewData["Title"] = "Accesso Negato";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center">
+            <span class="material-icons text-danger" style="font-size: 6rem;">block</span>
+            <h1 class="display-4 mt-3">Accesso Negato</h1>
+            <p class="lead">Non hai i permessi necessari per accedere a questa risorsa.</p>
+            <hr />
+            <p>Se ritieni che questo sia un errore, contatta l'amministratore del sistema.</p>
+            <a asp-controller="Home" asp-action="Index" class="btn btn-videosystem">
+                <span class="material-icons align-middle">home</span>
+                Torna alla Dashboard
+            </a>
+        </div>
+    </div>
+</div>

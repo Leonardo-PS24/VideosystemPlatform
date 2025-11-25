@@ -1,0 +1,180 @@
+/* Videosystem Platform - Custom CSS */
+/* Colori aziendali: #00945E (verde principale), #FFFFFF (bianco) */
+
+:root {
+    --videosystem-green: #00945E;
+    --videosystem-green-dark: #007549;
+    --videosystem-green-light: #00B574;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+main {
+    flex: 1;
+}
+
+/* Navbar personalizzata */
+.bg-videosystem {
+    background-color: var(--videosystem-green) !important;
+}
+
+.navbar-brand {
+    font-size: 1.5rem;
+    font-weight: 500;
+}
+
+/* Pulsanti personalizzati */
+.btn-videosystem {
+    background-color: var(--videosystem-green);
+    border-color: var(--videosystem-green);
+    color: white;
+}
+
+.btn-videosystem:hover {
+    background-color: var(--videosystem-green-dark);
+    border-color: var(--videosystem-green-dark);
+    color: white;
+}
+
+.btn-videosystem:focus,
+.btn-videosystem:active {
+    background-color: var(--videosystem-green-dark);
+    border-color: var(--videosystem-green-dark);
+    color: white;
+    box-shadow: 0 0 0 0.25rem rgba(0, 148, 94, 0.25);
+}
+
+/* Testo verde */
+.text-videosystem {
+    color: var(--videosystem-green) !important;
+}
+
+/* Card applicazioni */
+.app-card {
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.app-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15) !important;
+}
+
+.app-icon {
+    font-size: 4rem;
+}
+
+/* Material Icons allineamento */
+.material-icons.align-middle {
+    vertical-align: middle;
+    font-size: 1.2rem;
+}
+
+/* Tabelle */
+.table-dark {
+    background-color: #212529;
+}
+
+/* Form styling */
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--videosystem-green);
+    box-shadow: 0 0 0 0.25rem rgba(0, 148, 94, 0.25);
+}
+
+/* Card header personalizzato */
+.card-header.bg-videosystem {
+    background-color: var(--videosystem-green) !important;
+}
+
+/* Alert personalizzati */
+.alert {
+    display: flex;
+    align-items: center;
+}
+
+.alert .material-icons {
+    margin-right: 0.5rem;
+}
+
+/* Footer */
+.footer {
+    background-color: #f8f9fa;
+    margin-top: auto;
+}
+
+/* Badge */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35em 0.65em;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .navbar-brand {
+        font-size: 1.2rem;
+    }
+
+    .display-4 {
+        font-size: 2rem;
+    }
+
+    .app-icon {
+        font-size: 3rem;
+    }
+}
+
+/* Utility classes */
+.cursor-pointer {
+    cursor: pointer;
+}
+
+/* Login page */
+.card-body.p-5 {
+    padding: 3rem !important;
+}
+
+/* Dropdown personalizzato */
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+}
+
+.dropdown-item .material-icons {
+    margin-right: 0.5rem;
+    font-size: 1.2rem;
+}
+
+/* Animazioni */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+/* Print styles */
+@media print {
+    .navbar,
+    .footer,
+    .btn,
+    .alert {
+        display: none !important;
+    }
+}
