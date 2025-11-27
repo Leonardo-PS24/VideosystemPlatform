@@ -678,6 +678,50 @@ body {
     background: #555;
 }
 
+/* ===== PERMISSION BUTTONS ===== */
+.permission-btn {
+    width: 32px;
+    height: 32px;
+    border: 2px solid #e5e7eb;
+    background: white;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all var(--transition-speed);
+    padding: 0;
+}
+
+.permission-btn .material-icons {
+    font-size: 18px;
+    color: #9ca3af;
+}
+
+.permission-btn:hover {
+    border-color: var(--vs-green);
+    transform: scale(1.1);
+}
+
+.permission-btn.active {
+    background-color: var(--vs-green);
+    border-color: var(--vs-green);
+}
+
+.permission-btn.active .material-icons {
+    color: white;
+}
+
+.permission-btn.active.delete {
+    background-color: #ef4444;
+    border-color: #ef4444;
+}
+
+.permission-btn.active.delete:hover {
+    background-color: #dc2626;
+    border-color: #dc2626;
+}
+
 /* ===== UTILITY CLASSES ===== */
 .cursor-pointer {
     cursor: pointer;

@@ -1,0 +1,280 @@
+@model Platform.Portal.Models.ViewModels.UserPermissionsViewModel
+@{
+    ViewData["Title"] = "Modifica Permessi Utente";
+    ViewData["Subtitle"] = $"Configura i permessi di accesso per {Model.FullName}";
+}
+
+<!-- Info Utente -->
+<div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, var(--vs-green) 0%, var(--vs-green-dark) 100%); color: white;">
+    <div class="card-body p-4">
+        <div class="d-flex align-items-center gap-3">
+            <div class="user-avatar-table" style="width: 80px; height: 80px; font-size: 2.5rem; background: rgba(255,255,255,0.2); border: 3px solid rgba(255,255,255,0.3);">
+                @Model.FullName.Substring(0, 1).ToUpper()
+            </div>
+            <div class="flex-grow-1">
+                <h3 class="mb-2">@Model.FullName</h3>
+                <p class="mb-1 d-flex align-items-center gap-2">
+                    <span class="material-icons">alternate_email</span>
+                    @Model.Username
+                </p>
+                <p class="mb-2 d-flex align-items-center gap-2">
+                    <span class="material-icons">email</span>
+                    @Model.Email
+                </p>
+                <span class="badge" style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px);">
+                    <span class="material-icons align-middle">@(Model.Role == "Admin" ? "admin_panel_settings" : "person")</span>
+                    @Model.Role
+                </span>
+            </div>
+            <div class="text-center p-3" style="background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border-radius: 12px;">
+                <div style="font-size: 2.5rem; font-weight: 700; line-height: 1;">
+                    @Model.Applications.Count(a => a.CanView || a.CanCreate || a.CanEdit || a.CanDelete)
+                </div>
+                <div style="font-size: 0.875rem; opacity: 0.9; margin-top: 0.25rem;">Permessi Attivi</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Form Permessi -->
+<form asp-action="EditUser" method="post" id="permissionsForm">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="UserId" />
+    <input type="hidden" asp-for="Username" />
+    <input type="hidden" asp-for="FullName" />
+    <input type="hidden" asp-for="Email" />
+    <input type="hidden" asp-for="Role" />
+
+    <div class="row g-4 mb-4">
+        @for (int i = 0; i < Model.Applications.Count; i++)
+        {
+            var app = Model.Applications[i];
+            var hasAnyPermission = app.CanView || app.CanCreate || app.CanEdit || app.CanDelete;
+
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm h-100" style="@(hasAnyPermission ? "border: 2px solid var(--vs-green) !important;" : "")">
+                    <input type="hidden" asp-for="Applications[i].Id" />
+                    <input type="hidden" asp-for="Applications[i].ApplicationName" />
+                    <input type="hidden" asp-for="Applications[i].DisplayName" />
+                    <input type="hidden" asp-for="Applications[i].Icon" />
+
+                    <!-- Header Applicazione -->
+                    <div class="card-header" style="background: linear-gradient(135deg, var(--vs-green) 0%, var(--vs-green-dark) 100%); color: white; border: none;">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); border-radius: 12px;">
+                                <span class="material-icons" style="font-size: 2rem;">@app.Icon</span>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h5 class="mb-0 fw-semibold">@app.DisplayName</h5>
+                                <small style="opacity: 0.8;">@app.ApplicationName</small>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input all-permissions-toggle"
+                                       type="checkbox"
+                                       id="all_@i"
+                                       onchange="toggleAllPermissions(@i, this.checked)"
+                                       style="width: 3rem; height: 1.5rem; background-color: rgba(255,255,255,0.3); border-color: rgba(255,255,255,0.5);"
+                                       @(app.CanView && app.CanCreate && app.CanEdit && app.CanDelete ? "checked" : "")>
+                                <label class="form-check-label text-white" for="all_@i">Tutti</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Permessi -->
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <!-- View Permission -->
+                            <div class="col-md-6">
+                                <div class="p-3 border rounded @(app.CanView ? "border-success bg-success bg-opacity-10" : "")" id="box_view_@i">
+                                    <div class="d-flex gap-2 align-items-start">
+                                        <div class="d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; border-radius: 10px; background: rgba(0,148,94,0.1); color: var(--vs-green);">
+                                            <span class="material-icons">visibility</span>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input permission-checkbox"
+                                                       type="checkbox"
+                                                       asp-for="Applications[i].CanView"
+                                                       id="view_@i"
+                                                       data-group="@i"
+                                                       onchange="updatePermissionBox(this)">
+                                                <label class="form-check-label" for="view_@i">
+                                                    <div class="fw-semibold">Visualizzazione</div>
+                                                    <small class="text-muted">Può visualizzare i dati</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Create Permission -->
+                            <div class="col-md-6">
+                                <div class="p-3 border rounded @(app.CanCreate ? "border-primary bg-primary bg-opacity-10" : "")" id="box_create_@i">
+                                    <div class="d-flex gap-2 align-items-start">
+                                        <div class="d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; border-radius: 10px; background: rgba(59,130,246,0.1); color: #3b82f6;">
+                                            <span class="material-icons">add_circle</span>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input permission-checkbox"
+                                                       type="checkbox"
+                                                       asp-for="Applications[i].CanCreate"
+                                                       id="create_@i"
+                                                       data-group="@i"
+                                                       onchange="updatePermissionBox(this)">
+                                                <label class="form-check-label" for="create_@i">
+                                                    <div class="fw-semibold">Creazione</div>
+                                                    <small class="text-muted">Può creare nuovi record</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Edit Permission -->
+                            <div class="col-md-6">
+                                <div class="p-3 border rounded @(app.CanEdit ? "border-warning bg-warning bg-opacity-10" : "")" id="box_edit_@i">
+                                    <div class="d-flex gap-2 align-items-start">
+                                        <div class="d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; border-radius: 10px; background: rgba(251,146,60,0.1); color: #fb923c;">
+                                            <span class="material-icons">edit</span>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input permission-checkbox"
+                                                       type="checkbox"
+                                                       asp-for="Applications[i].CanEdit"
+                                                       id="edit_@i"
+                                                       data-group="@i"
+                                                       onchange="updatePermissionBox(this)">
+                                                <label class="form-check-label" for="edit_@i">
+                                                    <div class="fw-semibold">Modifica</div>
+                                                    <small class="text-muted">Può modificare record esistenti</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Delete Permission -->
+                            <div class="col-md-6">
+                                <div class="p-3 border rounded @(app.CanDelete ? "border-danger bg-danger bg-opacity-10" : "")" id="box_delete_@i">
+                                    <div class="d-flex gap-2 align-items-start">
+                                        <div class="d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; border-radius: 10px; background: rgba(239,68,68,0.1); color: #ef4444;">
+                                            <span class="material-icons">delete</span>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input permission-checkbox"
+                                                       type="checkbox"
+                                                       asp-for="Applications[i].CanDelete"
+                                                       id="delete_@i"
+                                                       data-group="@i"
+                                                       onchange="updatePermissionBox(this)">
+                                                <label class="form-check-label" for="delete_@i">
+                                                    <div class="fw-semibold">Eliminazione</div>
+                                                    <small class="text-muted">Può eliminare record</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Form Actions -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-end gap-3">
+                <a href="@Url.Action("Index")" class="btn btn-outline-secondary btn-lg">
+                    <span class="material-icons align-middle">close</span>
+                    Annulla
+                </a>
+                <button type="button" class="btn btn-outline-danger btn-lg" onclick="resetAllPermissions()">
+                    <span class="material-icons align-middle">delete_sweep</span>
+                    Rimuovi Tutti
+                </button>
+                <button type="submit" class="btn btn-videosystem btn-lg">
+                    <span class="material-icons align-middle">save</span>
+                    Salva Permessi
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        function toggleAllPermissions(groupIndex, checked) {
+            const checkboxes = document.querySelectorAll(`input[data-group="${groupIndex}"]`);
+            checkboxes.forEach(cb => {
+                cb.checked = checked;
+                updatePermissionBox(cb);
+            });
+        }
+
+        function updatePermissionBox(checkbox) {
+            const permissionType = checkbox.id.split('_')[0];
+            const groupIndex = checkbox.dataset.group;
+            const box = document.getElementById(`box_${permissionType}_${groupIndex}`);
+
+            // Rimuovi tutte le classi di colore
+            box.classList.remove('border-success', 'bg-success', 'bg-opacity-10');
+            box.classList.remove('border-primary', 'bg-primary', 'bg-opacity-10');
+            box.classList.remove('border-warning', 'bg-warning', 'bg-opacity-10');
+            box.classList.remove('border-danger', 'bg-danger', 'bg-opacity-10');
+
+            // Aggiungi la classe appropriata se checked
+            if (checkbox.checked) {
+                if (permissionType === 'view') {
+                    box.classList.add('border-success', 'bg-success', 'bg-opacity-10');
+                } else if (permissionType === 'create') {
+                    box.classList.add('border-primary', 'bg-primary', 'bg-opacity-10');
+                } else if (permissionType === 'edit') {
+                    box.classList.add('border-warning', 'bg-warning', 'bg-opacity-10');
+                } else if (permissionType === 'delete') {
+                    box.classList.add('border-danger', 'bg-danger', 'bg-opacity-10');
+                }
+            }
+
+            // Aggiorna toggle "Tutti"
+            const allCheckbox = document.getElementById(`all_${groupIndex}`);
+            const groupCheckboxes = document.querySelectorAll(`input[data-group="${groupIndex}"]`);
+            const allChecked = Array.from(groupCheckboxes).every(cb => cb.checked);
+            allCheckbox.checked = allChecked;
+        }
+
+        function resetAllPermissions() {
+            if (confirm('Sei sicuro di voler rimuovere tutti i permessi di questo utente?')) {
+                const checkboxes = document.querySelectorAll('.permission-checkbox');
+                checkboxes.forEach(cb => {
+                    cb.checked = false;
+                    updatePermissionBox(cb);
+                });
+
+                const allToggles = document.querySelectorAll('.all-permissions-toggle');
+                allToggles.forEach(toggle => toggle.checked = false);
+            }
+        }
+
+        // Animazione card al caricamento
+        const cards = document.querySelectorAll('.col-lg-6');
+        cards.forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+
+            setTimeout(() => {
+                card.style.transition = 'all 0.4s ease-out';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, index * 100);
+        });
+    </script>
+}

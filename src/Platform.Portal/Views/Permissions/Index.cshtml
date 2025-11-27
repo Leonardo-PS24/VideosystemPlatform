@@ -1,0 +1,265 @@
+@model Platform.Portal.Models.ViewModels.PermissionMatrixViewModel
+@{
+    ViewData["Title"] = "Gestione Permessi";
+    ViewData["Subtitle"] = "Configura i permessi di accesso alle applicazioni per ogni utente";
+}
+
+<!-- Statistiche -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon blue">
+                <span class="material-icons">people</span>
+            </div>
+            <div class="stat-value">@Model.Users.Count()</div>
+            <div class="stat-label">Utenti Totali</div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon green">
+                <span class="material-icons">apps</span>
+            </div>
+            <div class="stat-value">@Model.Applications.Count()</div>
+            <div class="stat-label">Applicazioni</div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon orange">
+                <span class="material-icons">verified_user</span>
+            </div>
+            <div class="stat-value">@Model.Users.Count(u => u.Permissions != null && u.Permissions.Count > 0)</div>
+            <div class="stat-label">Utenti con Permessi</div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon red">
+                <span class="material-icons">admin_panel_settings</span>
+            </div>
+            <div class="stat-value">@Model.Users.Count(u => u.Role == "Admin")</div>
+            <div class="stat-label">Amministratori</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtri -->
+<div class="filters-card">
+    <form method="get" class="row g-3">
+        <div class="col-md-5">
+            <div class="filter-group">
+                <label for="roleFilter" class="form-label">
+                    <span class="material-icons align-middle" style="font-size: 16px;">filter_alt</span>
+                    Filtra per Ruolo
+                </label>
+                <select name="roleFilter" id="roleFilter" class="form-select" onchange="this.form.submit()">
+                    <option value="">Tutti i ruoli</option>
+                    <option value="Admin" selected="@(Model.RoleFilter == "Admin")">Admin</option>
+                    <option value="User" selected="@(Model.RoleFilter == "User")">User</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="col-md-5">
+            <div class="filter-group">
+                <label for="applicationFilter" class="form-label">
+                    <span class="material-icons align-middle" style="font-size: 16px;">apps</span>
+                    Filtra per Applicazione
+                </label>
+                <select name="applicationFilter" id="applicationFilter" class="form-select" onchange="this.form.submit()">
+                    <option value="">Tutte le applicazioni</option>
+                    @foreach (var app in Model.Applications)
+                    {
+                        <option value="@app" selected="@(Model.ApplicationFilter == app)">
+                            @Platform.Portal.Models.ApplicationName.GetDisplayName(app)
+                        </option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.RoleFilter) || !string.IsNullOrEmpty(Model.ApplicationFilter))
+        {
+            <div class="col-md-2 d-flex align-items-end">
+                <a href="@Url.Action("Index")" class="btn btn-outline-secondary w-100">
+                    <span class="material-icons align-middle">clear</span>
+                    Rimuovi Filtri
+                </a>
+            </div>
+        }
+    </form>
+</div>
+
+<!-- Matrice Permessi -->
+<div class="table-card">
+    <div class="table-card-body">
+        @if (Model.Users.Any())
+        {
+            <div class="table-responsive">
+                <table class="table" id="permissionsTable">
+                    <thead>
+                        <tr>
+                            <th style="min-width: 200px;">
+                                <span class="material-icons align-middle" style="font-size: 16px;">person</span>
+                                Utente
+                            </th>
+                            @foreach (var app in Model.Applications)
+                            {
+                                <th class="text-center" style="min-width: 160px;">
+                                    <div class="d-flex flex-column align-items-center gap-1">
+                                        <span class="material-icons">@Platform.Portal.Models.ApplicationName.GetIcon(app)</span>
+                                        <small>@Platform.Portal.Models.ApplicationName.GetDisplayName(app)</small>
+                                    </div>
+                                </th>
+                            }
+                            <th class="text-center" style="min-width: 100px;">Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in Model.Users)
+                        {
+                            var userId = user.UserId;
+                            var username = user.Username;
+                            var fullName = user.FullName;
+                            var role = user.Role;
+                            var isActive = user.IsActive;
+                            var permissions = user.Permissions;
+
+                            <tr class="@(isActive ? "" : "opacity-50")">
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="user-avatar-table">
+                                            @fullName?.Substring(0, 1).ToUpper()
+                                        </div>
+                                        <div>
+                                            <div class="fw-semibold">@fullName</div>
+                                            <small class="text-muted">@@@username</small>
+                                            <div class="mt-1">
+                                                <span class="badge @(role == "Admin" ? "bg-danger" : "bg-primary")">
+                                                    @role
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                @foreach (var app in Model.Applications)
+                                {
+                                    var appPerms = permissions.ContainsKey(app) ? permissions[app] : null;
+                                    var canView = appPerms?.CanView ?? false;
+                                    var canCreate = appPerms?.CanCreate ?? false;
+                                    var canEdit = appPerms?.CanEdit ?? false;
+                                    var canDelete = appPerms?.CanDelete ?? false;
+
+                                    <td class="text-center">
+                                        <div class="d-flex justify-content-center gap-1 flex-wrap">
+                                            <button class="permission-btn @(canView ? "active view" : "")"
+                                                    title="View"
+                                                    onclick="togglePermission('@userId', '@app', 'view', this)">
+                                                <span class="material-icons">visibility</span>
+                                            </button>
+                                            <button class="permission-btn @(canCreate ? "active create" : "")"
+                                                    title="Create"
+                                                    onclick="togglePermission('@userId', '@app', 'create', this)">
+                                                <span class="material-icons">add_circle</span>
+                                            </button>
+                                            <button class="permission-btn @(canEdit ? "active edit" : "")"
+                                                    title="Edit"
+                                                    onclick="togglePermission('@userId', '@app', 'edit', this)">
+                                                <span class="material-icons">edit</span>
+                                            </button>
+                                            <button class="permission-btn @(canDelete ? "active delete" : "")"
+                                                    title="Delete"
+                                                    onclick="togglePermission('@userId', '@app', 'delete', this)">
+                                                <span class="material-icons">delete</span>
+                                            </button>
+                                        </div>
+                                    </td>
+                                }
+                                <td class="text-center">
+                                    <a href="@Url.Action("EditUser", new { userId })"
+                                       class="btn btn-sm btn-outline-primary">
+                                        <span class="material-icons" style="font-size: 16px;">edit</span>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <div class="empty-state-icon">
+                    <span class="material-icons">search_off</span>
+                </div>
+                <h3 class="empty-state-title">Nessun utente trovato</h3>
+                <p class="empty-state-description">Prova a modificare i filtri di ricerca</p>
+            </div>
+        }
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+@section Scripts {
+    <script>
+        async function togglePermission(userId, applicationName, permissionType, button) {
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            try {
+                const response = await fetch('@Url.Action("TogglePermission")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': token
+                    },
+                    body: JSON.stringify({
+                        userId: userId,
+                        applicationName: applicationName,
+                        permissionType: permissionType
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Toggle classe active
+                    if (result.newValue) {
+                        button.classList.add('active');
+                    } else {
+                        button.classList.remove('active');
+                    }
+
+                    // Animazione
+                    button.style.transform = 'scale(1.15)';
+                    setTimeout(() => {
+                        button.style.transform = '';
+                    }, 200);
+                } else {
+                    alert(result.message || 'Errore nell\'operazione');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Errore di comunicazione con il server');
+            }
+        }
+
+        // Animazione righe al caricamento
+        const rows = document.querySelectorAll('#permissionsTable tbody tr');
+        rows.forEach((row, index) => {
+            row.style.opacity = '0';
+            row.style.transform = 'translateX(-20px)';
+
+            setTimeout(() => {
+                row.style.transition = 'all 0.4s ease-out';
+                row.style.opacity = '1';
+                row.style.transform = 'translateX(0)';
+            }, index * 50);
+        });
+    </script>
+}

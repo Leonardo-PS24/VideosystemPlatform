@@ -1,10 +1,11 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Platform.Portal.Data;
+using Platform.Portal.Middleware;      
 using Platform.Portal.Models;
+using Platform.Portal.Services;        
 using Platform.Shared.Services;
 using Serilog;
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Usa solo HTTPS sulla porta 5001
@@ -47,6 +48,8 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
+
+builder.Services.AddScoped<IPermissionService, PermissionService>();
 
 // Configura cookie authentication
 builder.Services.ConfigureApplicationCookie(options =>
@@ -118,6 +121,8 @@ app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UsePermissionMiddleware();
 
 app.UseSerilogRequestLogging();
 
