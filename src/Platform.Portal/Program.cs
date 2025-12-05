@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Platform.Portal.Data;
+using Microsoft.FeatureManagement;
 using Platform.Portal.Middleware;      
 using Platform.Portal.Models;
 using Platform.Portal.Services;        
@@ -23,10 +24,11 @@ builder.Host.UseSerilog();
 
 // Aggiungi servizi al container
 builder.Services.AddControllersWithViews();
+builder.Services.AddFeatureManagement();
 
 // Configura DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Configura Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
