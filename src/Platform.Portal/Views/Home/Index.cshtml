@@ -5,6 +5,13 @@
     ViewData["Subtitle"] = "Benvenuto nella piattaforma interna Videosystem";
 }
 
+<feature name="DeveloperMode">
+    <div class="alert alert-warning" role="alert">
+        <h4 class="alert-heading">Modalità Sviluppatore Attiva</h4>
+        <p>Questa modalità è destinata solo a scopo di test e sviluppo. Le funzionalità potrebbero essere instabili.</p>
+    </div>
+</feature>
+
 <!-- Statistiche -->
 <div class="row g-4 mb-4 fade-in">
     <div class="col-md-3">
@@ -75,8 +82,8 @@
                         }
                     </div>
                     <div class="app-card-footer">
-                        <a href="@app.Url" class="btn btn-primary w-100" target="_blank">
-                            <span class="material-icons">open_in_new</span>
+                        <a asp-controller="Apps" asp-action="View" asp-route-appId="@app.AppId" class="btn btn-primary w-100">
+                            <span class="material-icons">launch</span>
                             Apri Applicazione
                         </a>
                     </div>
