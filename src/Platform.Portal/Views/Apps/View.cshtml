@@ -1,0 +1,89 @@
+@model Platform.Portal.Controllers.ApplicationInfo
+
+@{
+    ViewData["Title"] = Model.Name;
+    ViewData["HidePageHeader"] = true; // Nasconde l'header della pagina normale
+}
+
+<div class="app-container">
+    <div class="app-header">
+        <div class="d-flex align-items-center">
+            <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary me-3">
+                <span class="material-icons">arrow_back</span>
+                Torna alla Dashboard
+            </a>
+            <h4 class="mb-0">
+                <span class="material-icons align-middle me-2">@Model.Icon</span>
+                @Model.Name
+            </h4>
+        </div>
+    </div>
+
+    <div class="app-frame-container">
+        <iframe
+            id="appFrame"
+            src="@Model.Url"
+            frameborder="0"
+            allowfullscreen
+            class="app-frame">
+        </iframe>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Gestione iframe
+        const iframe = document.getElementById('appFrame');
+
+        // Mostra loader durante il caricamento
+        iframe.addEventListener('load', function() {
+            console.log('Applicazione caricata:', '@Model.Name');
+        });
+
+        // Gestione errori
+        iframe.addEventListener('error', function() {
+            console.error('Errore nel caricamento dell\'applicazione');
+            alert('Impossibile caricare l\'applicazione. Verifica che sia in esecuzione.');
+        });
+    </script>
+}
+
+<style>
+    .app-container {
+        position: fixed;
+        top: 0;
+        left: 250px; /* Larghezza sidebar */
+        right: 0;
+        bottom: 0;
+        display: flex;
+        flex-direction: column;
+        background: #f8f9fa;
+        transition: left 0.3s ease;
+    }
+
+    /* Quando la sidebar è compressa */
+    body.sidebar-collapsed .app-container {
+        left: 70px;
+    }
+
+    .app-header {
+        background: white;
+        padding: 1rem 2rem;
+        border-bottom: 1px solid #dee2e6;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        z-index: 10;
+    }
+
+    .app-frame-container {
+        flex: 1;
+        padding: 0;
+        overflow: hidden;
+    }
+
+    .app-frame {
+        width: 100%;
+        height: 100%;
+        border: none;
+        background: white;
+    }
+</style>

@@ -29,6 +29,9 @@
                         <span class="material-icons">layers</span>
                         <span class="logo-text">Videosystem</span>
                     </div>
+                    <button class="sidebar-toggle" onclick="toggleSidebar()">
+                        <span class="material-icons">menu</span>
+                    </button>
                 </div>
                 
                 <nav class="sidebar-nav">
@@ -58,18 +61,6 @@
                                 </a>
                             </li>
                         }
-                        
-                        <li class="nav-divider">
-                            <span>Applicazioni</span>
-                        </li>
-                        
-                        <li class="nav-item">
-                            <a class="nav-link disabled">
-                                <span class="material-icons">computer</span>
-                                <span>Kiosk Registration</span>
-                                <span class="badge bg-secondary ms-auto">Presto</span>
-                            </a>
-                        </li>
                     </ul>
                 </nav>
                 
@@ -94,22 +85,25 @@
             
             <!-- Main Content -->
             <main class="main-content">
-                <div class="content-header">
-                    <div class="container-fluid">
-                        <div class="row align-items-center">
-                            <div class="col">
-                                <h1 class="page-title">@ViewData["Title"]</h1>
-                                @if (ViewData["Subtitle"] != null)
-                                {
-                                    <p class="page-subtitle">@ViewData["Subtitle"]</p>
-                                }
-                            </div>
-                            <div class="col-auto">
-                                @RenderSection("HeaderActions", required: false)
+                @if (ViewData["HidePageHeader"] == null || !(bool?)ViewData["HidePageHeader"] == true)
+                {
+                    <div class="content-header">
+                        <div class="container-fluid">
+                            <div class="row align-items-center">
+                                <div class="col">
+                                    <h1 class="page-title">@ViewData["Title"]</h1>
+                                    @if (ViewData["Subtitle"] != null)
+                                    {
+                                        <p class="page-subtitle">@ViewData["Subtitle"]</p>
+                                    }
+                                </div>
+                                <div class="col-auto">
+                                    @RenderSection("HeaderActions", required: false)
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                }
                 
                 <div class="content-body">
                     <div class="container-fluid">
@@ -163,7 +157,25 @@
     
     <!-- Custom JS -->
     <script src="~/js/site.js" asp-append-version="true"></script>
-    
+
+    <script>
+        // Funzione per toggle sidebar
+        function toggleSidebar() {
+            document.body.classList.toggle('sidebar-collapsed');
+            // Salva lo stato nel localStorage
+            const isCollapsed = document.body.classList.contains('sidebar-collapsed');
+            localStorage.setItem('sidebarCollapsed', isCollapsed);
+        }
+
+        // Ripristina lo stato della sidebar al caricamento
+        document.addEventListener('DOMContentLoaded', function() {
+            const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            if (isCollapsed) {
+                document.body.classList.add('sidebar-collapsed');
+            }
+        });
+    </script>
+
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

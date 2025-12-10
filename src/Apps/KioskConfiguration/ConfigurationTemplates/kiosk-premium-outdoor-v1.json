@@ -1,0 +1,680 @@
+﻿{
+  "templateId": "kiosk-premium-outdoor-v1",
+  "templateName": "Kiosk Premium Outdoor IP65",
+  "version": "1.0",
+  "description": "Checklist completa per kiosk premium da esterno con protezione IP65 e sistema di pagamento integrato",
+  "sections": [
+    {
+      "sectionId": "identification",
+      "sectionName": "Identificazione e Cliente",
+      "order": 1,
+      "icon": "badge",
+      "fields": [
+        {
+          "fieldId": "serialNumber",
+          "fieldName": "Numero Seriale Kiosk",
+          "fieldType": "text",
+          "required": true,
+          "placeholder": "SN-2025-0001",
+          "validation": {
+            "pattern": "^SN-[0-9]{4}-[0-9]{4}$",
+            "errorMessage": "Formato richiesto: SN-YYYY-NNNN (es: SN-2025-0001)"
+          }
+        },
+        {
+          "fieldId": "modelCode",
+          "fieldName": "Codice Modello",
+          "fieldType": "dropdown",
+          "required": true,
+          "options": [
+            { "value": "k3000-outdoor", "label": "K3000 Outdoor - 42 pollici" },
+            { "value": "k4000-outdoor", "label": "K4000 Outdoor - 55 pollici" },
+            { "value": "k5000-outdoor", "label": "K5000 Outdoor - 65 pollici" }
+          ]
+        },
+        {
+          "fieldId": "clientName",
+          "fieldName": "Nome Cliente",
+          "fieldType": "text",
+          "required": true,
+          "placeholder": "Ragione sociale cliente"
+        },
+        {
+          "fieldId": "destinationAddress",
+          "fieldName": "Indirizzo Destinazione",
+          "fieldType": "textarea",
+          "required": true,
+          "placeholder": "Via, Città, CAP",
+          "maxLength": 500
+        },
+        {
+          "fieldId": "installationDate",
+          "fieldName": "Data Installazione Prevista",
+          "fieldType": "date",
+          "required": true
+        }
+      ]
+    },
+    {
+      "sectionId": "hardware_main",
+      "sectionName": "Hardware Principale",
+      "order": 2,
+      "icon": "computer",
+      "fields": [
+        {
+          "fieldId": "screenSize",
+          "fieldName": "Dimensione Schermo",
+          "fieldType": "dropdown",
+          "required": true,
+          "options": [
+            { "value": "42", "label": "42 pollici" },
+            { "value": "55", "label": "55 pollici" },
+            { "value": "65", "label": "65 pollici" }
+          ]
+        },
+        {
+          "fieldId": "screenBrightness",
+          "fieldName": "Luminosità Schermo (nits)",
+          "fieldType": "number",
+          "required": true,
+          "validation": {
+            "min": 1000,
+            "max": 5000,
+            "errorMessage": "Luminosità deve essere tra 1000 e 5000 nits"
+          }
+        },
+        {
+          "fieldId": "screenTest",
+          "fieldName": "Test accensione schermo completato",
+          "fieldType": "checkbox",
+          "required": true
+        },
+        {
+          "fieldId": "touchCalibrated",
+          "fieldName": "Touchscreen calibrato e testato",
+          "fieldType": "checkbox",
+          "required": true
+        },
+        {
+          "fieldId": "cpuModel",
+          "fieldName": "Modello CPU",
+          "fieldType": "text",
+          "required": true,
+          "placeholder": "Intel Core i5-12400"
+        },
+        {
+          "fieldId": "ramSize",
+          "fieldName": "RAM installata (GB)",
+          "fieldType": "number",
+          "required": true,
+          "validation": {
+            "min": 8,
+            "max": 64,
+            "errorMessage": "RAM deve essere tra 8 e 64 GB"
+          }
+        },
+        {
+          "fieldId": "storageType",
+          "fieldName": "Tipo Storage",
+          "fieldType": "radio",
+          "required": true,
+          "options": [
+            { "value": "ssd-sata", "label": "SSD SATA" },
+            { "value": "ssd-nvme", "label": "SSD NVMe" }
+          ]
+        },
+        {
+          "fieldId": "storageSize",
+          "fieldName": "Capacità Storage (GB)",
+          "fieldType": "number",
+          "required": true,
+          "validation": {
+            "min": 128,
+            "max": 2048,
+            "errorMessage": "Storage deve essere tra 128 e 2048 GB"
+          }
+        }
+      ]
+    },
+    {
+      "sectionId": "peripherals",
+      "sectionName": "Periferiche",
+      "order": 3,
+      "icon": "devices",
+      "fields": [
+        {
+          "fieldId": "hasPrinter",
+          "fieldName": "Kiosk dotato di stampante termica",
+          "fieldType": "checkbox",
+          "required": false
+        },
+        {
+          "fieldId": "printerModel",
+          "fieldName": "Modello Stampante",
+          "fieldType": "dropdown",
+          "required": false,
+          "options": [
+            { "value": "epson-tm-t88", "label": "Epson TM-T88VI" },
+            { "value": "star-tsp143", "label": "Star TSP143III" },
+            { "value": "custom-kpm216", "label": "Custom KPM216H" }
+          ],
+          "dependsOn": {
+            "field": "hasPrinter",
+            "condition": "equals",
+            "value": "true"
+          }
+        },
+        {
+          "fieldId": "printerTest",
+          "fieldName": "Test stampa ricevuta eseguito",
+          "fieldType": "checkbox",
+          "required": false,
+          "dependsOn": {
+            "field": "hasPrinter",
+            "condition": "equals",
+            "value": "true"
+          }
+        },
+        {
+          "fieldId": "hasCardReader",
+          "fieldName": "Lettore carte presente",
+          "fieldType": "checkbox",
+          "required": false
+        },
+        {
+          "fieldId": "cardReaderType",
+          "fieldName": "Tipo Lettore Carte",
+          "fieldType": "dropdown",
+          "required": false,
+          "options": [
+            { "value": "magnetic", "label": "Banda magnetica" },
+            { "value": "chip", "label": "Chip EMV" },
+            { "value": "contactless", "label": "Contactless NFC" },
+            { "value": "all", "label": "Tutti i tipi" }
+          ],
+          "dependsOn": {
+            "field": "hasCardReader",
+            "condition": "equals",
+            "value": "true"
+          }
+        },
+        {
+          "fieldId": "cardReaderTest",
+          "fieldName": "Test lettura carte eseguito",
+          "fieldType": "checkbox",
+          "required": false,
+          "dependsOn": {
+            "field": "hasCardReader",
+            "condition": "equals",
+            "value": "true"
+          }
+        },
+        {
+          "fieldId": "hasBarcodeScanner",
+          "fieldName": "Scanner barcode/QR presente",
+          "fieldType": "checkbox",
+          "required": false
+        },
+        {
+          "fieldId": "scannerTest",
+          "fieldName": "Test scansione QR/barcode eseguito",
+          "fieldType": "checkbox",
+          "required": false,
+          "dependsOn": {
+            "field": "hasBarcodeScanner",
+            "condition": "equals",
+            "value": "true"
+          }
+        }
+      ]
+    },
+    {
+      "sectionId": "protection",
+      "sectionName": "Protezione IP65 e Sicurezza Fisica",
+      "order": 4,
+      "icon": "shield",
+      "fields": [
+        {
+          "fieldId": "ip65Certified",
+          "fieldName": "Certificazione IP65 verificata",
+          "fieldType": "checkbox",
+          "required": true
+        },
+        {
+          "fieldId": "sealsIntact",
+          "fieldName": "Guarnizioni intatte e correttamente montate",
+          "fieldType": "checkbox",
+          "required": true
+        },
+        {
+          "fieldId": "ventilationTest",
+          "fieldName": "Sistema ventilazione/raffreddamento testato",
+          "fieldType": "checkbox",
+          "required": true
+        },
+        {
+          "fieldId": "temperatureSensors",
+          "fieldName": "Sensori temperatura funzionanti",
+          "fieldType": "checkbox",
+          "required": true
+        },
+        {
+          "fieldId": "antiVandalLock",
+          "fieldName": "Serratura anti-vandalo installata",
+          "fieldType": "checkbox",
+          "required": true
+        },
+        {
+          "fieldId": "lockCode",
+          "fieldName": "Codice serratura elettronica",
+          "fieldType": "password",
+          "required": true,
+          "encrypted": true,
+          "minLength": 4,
+          "maxLength": 8
+        }
+      ]
+    },
+    {
+      "sectionId": "software",
+      "sectionName": "Software e Sistema Operativo",
+      "order": 5,
+      "icon": "settings",
+      "fields": [
+        {
+          "fieldId": "osVersion",
+          "fieldName": "Sistema Operativo",
+          "fieldType": "text",
+          "required": true,
+          "placeholder": "Windows 10 IoT Enterprise LTSC 2021"
+        },
+        {
+          "fieldId": "osLicenseKey",
+          "fieldName": "Product Key Windows",
+          "fieldType": "password",
+          "required": true,
+          "encrypted": true,
+          "validation": {
+            "pattern": "^([A-Z0-9]{5}-){4}[A-Z0-9]{5}$",
+            "errorMessage": "Formato: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"
+          }
+        },
+        {
+          "fieldId": "videosystemAppVersion",
+          "fieldName": "Versione App Videosystem",
+          "fieldType": "text",
+          "required": true,
+          "placeholder": "v3.2.1"
+        },
+        {
+          "fieldId": "appLicenseActivated",
+          "fieldName": "Licenza Videosystem attivata",
+          "fieldType": "checkbox",
+          "required": true
+        },
+        {
+          "fieldId": "antivirusInstalled",
+          "fieldName": "Antivirus installato",
+          "fieldType": "dropdown",
+          "required": true,
+          "options": [
+            { "value": "windows-defender", "label": "Windows Defender" },
+            { "value": "kaspersky", "label": "Kaspersky Endpoint" },
+            { "value": "eset", "label": "ESET Endpoint" }
+          ]
+        },
+        {
+          "fieldId": "antivirusUpdated",
+          "fieldName": "Definizioni antivirus aggiornate",
+          "fieldType": "checkbox",
+          "required": true
+        },
+        {
+          "fieldId": "autoStartConfigured",
+          "fieldName": "Avvio automatico applicazione configurato",
+          "fieldType": "checkbox",
+          "required": true
+        }
+      ]
+    },
+    {
+      "sectionId": "network",
+      "sectionName": "Connettività e Rete",
+      "order": 6,
+      "icon": "wifi",
+      "fields": [
+        {
+          "fieldId": "primaryConnection",
+          "fieldName": "Connessione Primaria",
+          "fieldType": "radio",
+          "required": true,
+          "options": [
+            { "value": "ethernet", "label": "Ethernet Gigabit" },
+            { "value": "wifi", "label": "Wi-Fi 6" },
+            { "value": "4g", "label": "4G/LTE" },
+            { "value": "5g", "label": "5G" }
+          ]
+        },
+        {
+          "fieldId": "hasBackupConnection",
+          "fieldName": "Connessione di backup configurata",
+          "fieldType": "checkbox",
+          "required": false
+        },
+        {
+          "fieldId": "backupConnection",
+          "fieldName": "Tipo Connessione Backup",
+          "fieldType": "dropdown",
+          "required": false,
+          "options": [
+            { "value": "4g", "label": "4G/LTE" },
+            { "value": "wifi", "label": "Wi-Fi" }
+          ],
+          "dependsOn": {
+            "field": "hasBackupConnection",
+            "condition": "equals",
+            "value": "true"
+          }
+        },
+        {
+          "fieldId": "staticIp",
+          "fieldName": "IP Statico",
+          "fieldType": "text",
+          "required": true,
+          "placeholder": "192.168.1.100",
+          "validation": {
+            "pattern": "^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$",
+            "errorMessage": "Formato IP non valido"
+          }
+        },
+        {
+          "fieldId": "subnetMask",
+          "fieldName": "Subnet Mask",
+          "fieldType": "text",
+          "required": true,
+          "placeholder": "255.255.255.0"
+        },
+        {
+          "fieldId": "gateway",
+          "fieldName": "Gateway",
+          "fieldType": "text",
+          "required": true,
+          "placeholder": "192.168.1.1"
+        },
+        {
+          "fieldId": "dnsServers",
+          "fieldName": "Server DNS",
+          "fieldType": "text",
+          "required": true,
+          "placeholder": "8.8.8.8, 8.8.4.4"
+        },
+        {
+          "fieldId": "macAddress",
+          "fieldName": "Indirizzo MAC",
+          "fieldType": "text",
+          "required": true,
+          "placeholder": "00:1A:2B:3C:4D:5E",
+          "validation": {
+            "pattern": "^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$",
+            "errorMessage": "Formato MAC non valido"
+          }
+        }
+      ]
+    },
+    {
+      "sectionId": "remote_access",
+      "sectionName": "Accesso Remoto",
+      "order": 7,
+      "icon": "vpn_lock",
+      "fields": [
+        {
+          "fieldId": "teamviewerId",
+          "fieldName": "TeamViewer ID",
+          "fieldType": "text",
+          "required": true,
+          "placeholder": "123 456 789",
+          "validation": {
+            "pattern": "^[0-9]{3}\\s[0-9]{3}\\s[0-9]{3}$",
+            "errorMessage": "Formato: XXX XXX XXX"
+          }
+        },
+        {
+          "fieldId": "teamviewerPassword",
+          "fieldName": "TeamViewer Password",
+          "fieldType": "password",
+          "required": true,
+          "encrypted": true,
+          "minLength": 8
+        },
+        {
+          "fieldId": "vpnConfigured",
+          "fieldName": "VPN aziendale configurata",
+          "fieldType": "checkbox",
+          "required": false
+        },
+        {
+          "fieldId": "vpnProvider",
+          "fieldName": "Provider VPN",
+          "fieldType": "text",
+          "required": false,
+          "placeholder": "OpenVPN, WireGuard, etc.",
+          "dependsOn": {
+            "field": "vpnConfigured",
+            "condition": "equals",
+            "value": "true"
+          }
+        },
+        {
+          "fieldId": "sshEnabled",
+          "fieldName": "Accesso SSH abilitato (solo per debug)",
+          "fieldType": "checkbox",
+          "required": false
+        }
+      ]
+    },
+    {
+      "sectionId": "testing",
+      "sectionName": "Test Funzionali",
+      "order": 8,
+      "icon": "science",
+      "fields": [
+        {
+          "fieldId": "bootTest",
+          "fieldName": "Test avvio sistema (< 60 secondi)",
+          "fieldType": "checkbox",
+          "required": true
+        },
+        {
+          "fieldId": "appLoadTest",
+          "fieldName": "Test caricamento applicazione",
+          "fieldType": "checkbox",
+          "required": true
+        },
+        {
+          "fieldId": "transactionTest",
+          "fieldName": "Test transazione completa simulata",
+          "fieldType": "checkbox",
+          "required": true
+        },
+        {
+          "fieldId": "printTest",
+          "fieldName": "Test stampa ricevuta",
+          "fieldType": "checkbox",
+          "required": false
+        },
+        {
+          "fieldId": "paymentTest",
+          "fieldName": "Test pagamento con carta",
+          "fieldType": "checkbox",
+          "required": false
+        },
+        {
+          "fieldId": "weatherResistanceTest",
+          "fieldName": "Test resistenza temperatura (-20°C / +60°C)",
+          "fieldType": "checkbox",
+          "required": true
+        },
+        {
+          "fieldId": "continuousOperationTest",
+          "fieldName": "Test operatività continua (24h)",
+          "fieldType": "checkbox",
+          "required": true
+        },
+        {
+          "fieldId": "testDuration",
+          "fieldName": "Durata test complessivi (ore)",
+          "fieldType": "number",
+          "required": true,
+          "validation": {
+            "min": 24,
+            "max": 168,
+            "errorMessage": "Test devono durare tra 24 e 168 ore"
+          }
+        }
+      ]
+    },
+    {
+      "sectionId": "documentation",
+      "sectionName": "Documentazione e Materiali",
+      "order": 9,
+      "icon": "description",
+      "fields": [
+        {
+          "fieldId": "technicalManual",
+          "fieldName": "Manuale tecnico incluso",
+          "fieldType": "checkbox",
+          "required": true
+        },
+        {
+          "fieldId": "userManual",
+          "fieldName": "Manuale utente incluso",
+          "fieldType": "checkbox",
+          "required": true
+        },
+        {
+          "fieldId": "warrantyCard",
+          "fieldName": "Certificato di garanzia",
+          "fieldType": "checkbox",
+          "required": true
+        },
+        {
+          "fieldId": "installationGuide",
+          "fieldName": "Guida installazione on-site",
+          "fieldType": "checkbox",
+          "required": true
+        },
+        {
+          "fieldId": "cablingSpareParts",
+          "fieldName": "Cavi e parti di ricambio inclusi",
+          "fieldType": "checkbox",
+          "required": true
+        }
+      ]
+    },
+    {
+      "sectionId": "shipping",
+      "sectionName": "Imballaggio e Spedizione",
+      "order": 10,
+      "icon": "local_shipping",
+      "fields": [
+        {
+          "fieldId": "packagingCondition",
+          "fieldName": "Condizioni imballaggio",
+          "fieldType": "radio",
+          "required": true,
+          "options": [
+            { "value": "excellent", "label": "Eccellente - Nessun difetto" },
+            { "value": "good", "label": "Buono - Lievi imperfezioni" },
+            { "value": "acceptable", "label": "Accettabile - Da rinforzare" }
+          ]
+        },
+        {
+          "fieldId": "palletSecured",
+          "fieldName": "Kiosk fissato al pallet e protetto",
+          "fieldType": "checkbox",
+          "required": true
+        },
+        {
+          "fieldId": "fragileLabels",
+          "fieldName": "Etichette 'Fragile' applicate",
+          "fieldType": "checkbox",
+          "required": true
+        },
+        {
+          "fieldId": "shippingWeight",
+          "fieldName": "Peso totale spedizione (kg)",
+          "fieldType": "number",
+          "required": true,
+          "validation": {
+            "min": 50,
+            "max": 500,
+            "errorMessage": "Peso deve essere tra 50 e 500 kg"
+          }
+        },
+        {
+          "fieldId": "packagingPhotos",
+          "fieldName": "Foto imballaggio (4 lati + frontale)",
+          "fieldType": "file",
+          "required": true,
+          "accept": ".jpg,.jpeg,.png",
+          "maxSize": 10485760,
+          "maxFiles": 10
+        }
+      ]
+    },
+    {
+      "sectionId": "final_approval",
+      "sectionName": "Approvazione Finale",
+      "order": 11,
+      "icon": "verified",
+      "fields": [
+        {
+          "fieldId": "qualityLevel",
+          "fieldName": "Valutazione qualità complessiva",
+          "fieldType": "radio",
+          "required": true,
+          "options": [
+            { "value": "5", "label": "★★★★★ Eccellente" },
+            { "value": "4", "label": "★★★★☆ Ottimo" },
+            { "value": "3", "label": "★★★☆☆ Buono" },
+            { "value": "2", "label": "★★☆☆☆ Sufficiente" },
+            { "value": "1", "label": "★☆☆☆☆ Insufficiente" }
+          ]
+        },
+        {
+          "fieldId": "readyForShipping",
+          "fieldName": "Kiosk pronto per spedizione",
+          "fieldType": "checkbox",
+          "required": true
+        },
+        {
+          "fieldId": "additionalNotes",
+          "fieldName": "Note finali / Problemi riscontrati",
+          "fieldType": "textarea",
+          "required": false,
+          "placeholder": "Eventuali annotazioni importanti per il cliente o per l'installazione...",
+          "maxLength": 2000
+        },
+        {
+          "fieldId": "technicianName",
+          "fieldName": "Nome tecnico che ha eseguito i controlli",
+          "fieldType": "text",
+          "required": true,
+          "placeholder": "Nome Cognome"
+        },
+        {
+          "fieldId": "completionDate",
+          "fieldName": "Data completamento checklist",
+          "fieldType": "date",
+          "required": true
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "createdBy": "Engineering Department - Videosystem S.r.l.",
+    "createdAt": "2025-11-27",
+    "lastModified": "2025-11-27",
+    "status": "active"
+  }
+}

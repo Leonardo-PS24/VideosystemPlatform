@@ -9,8 +9,8 @@ using Platform.Shared.Services;
 using Serilog;
 var builder = WebApplication.CreateBuilder(args);
 
-// Usa solo HTTPS sulla porta 5001
-builder.WebHost.UseUrls("https://localhost:5001");
+// Configura porte HTTP e HTTPS
+builder.WebHost.UseUrls("http://localhost:5000", "https://localhost:5001");
 
 // Configura Serilog
 Log.Logger = new LoggerConfiguration()
@@ -86,17 +86,31 @@ using (var scope = app.Services.CreateScope())
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
         
-        // CREA IL DATABASE SE NON ESISTE
-        Log.Information("Verifica esistenza database...");
-        var created = context.Database.EnsureCreated();
-        if (created)
+        // Ricrea il database da zero (cancella e ricrea)
+        // NOTA: Rimuovere in produzione!
+        Log.Information("Verifico lo stato del database...");
+
+        try
         {
-            Log.Information("Database creato con successo!");
+            // Chiudi tutte le connessioni esistenti ed elimina il database
+            await context.Database.ExecuteSqlRawAsync(@"
+                IF EXISTS (SELECT name FROM sys.databases WHERE name = 'VideosystemPortal')
+                BEGIN
+                    ALTER DATABASE [VideosystemPortal] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+                    DROP DATABASE [VideosystemPortal];
+                END
+            ");
+            Log.Information("Database esistente eliminato");
         }
-        else
+        catch (Exception ex)
         {
-            Log.Information("Database già esistente");
+            Log.Information(ex, "Nessun database da eliminare o errore durante l'eliminazione");
         }
+
+        // Crea il database
+        Log.Information("Creo il database...");
+        context.Database.EnsureCreated();
+        Log.Information("Database ricreato con successo");
         
         // Inizializza dati di default
         await DbInitializer.Initialize(context, userManager, roleManager);

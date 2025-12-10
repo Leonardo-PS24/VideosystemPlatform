@@ -1,0 +1,94 @@
+@{
+    ViewData["Title"] = "Nuova Configurazione Kiosk";
+}
+
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <h2 class="page-title">
+            <span class="material-icons align-middle me-2">add_circle</span>
+            Nuova Configurazione Kiosk
+        </h2>
+        <a asp-controller="Configuration" asp-action="Index" class="btn btn-outline-secondary">
+            <span class="material-icons align-middle">arrow_back</span>
+            Torna alla Lista
+        </a>
+    </div>
+</div>
+
+<div class="content-card">
+    <form method="post" asp-controller="Configuration" asp-action="Create">
+        @Html.AntiForgeryToken()
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="serialNumber" class="form-label">Serial Number *</label>
+                    <input type="text" class="form-control" id="serialNumber" name="serialNumber" required placeholder="ES: KIOSK-2024-001">
+                    <div class="form-text">Inserisci il numero seriale univoco del kiosk</div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                @{
+                    var templates = ViewBag.Templates as List<Platform.Apps.KioskConfiguration.Models.ConfigurationTemplateEntity>;
+                    var hasTemplates = templates != null && templates.Count > 0;
+                }
+                <div class="mb-3">
+                    <label for="templateId" class="form-label">Template *</label>
+                    <select class="form-select" id="templateId" name="templateId" required>
+                        <option value="">-- Seleziona un template --</option>
+                        @if (hasTemplates)
+                        {
+                            @foreach (var template in templates)
+                            {
+                                <option value="@template.Id">@template.TemplateName (v@template.Version)</option>
+                            }
+                        }
+                    </select>
+                    <div class="form-text">Seleziona il template di configurazione da utilizzare</div>
+                    @if (!hasTemplates)
+                    {
+                        <div class="alert alert-warning mt-2">
+                            <small>Nessun template disponibile. Contatta l'amministratore.</small>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <hr class="my-4">
+
+        <div class="alert alert-info">
+            <span class="material-icons align-middle">info</span>
+            <strong>Informazione:</strong> Dopo aver creato la configurazione, potrai compilare tutti i campi specifici del template selezionato.
+        </div>
+
+        <div class="d-flex justify-content-end gap-2">
+            <a asp-controller="Configuration" asp-action="Index" class="btn btn-secondary">
+                <span class="material-icons align-middle">close</span>
+                Annulla
+            </a>
+            <button type="submit" class="btn btn-vs-primary">
+                <span class="material-icons align-middle">save</span>
+                Crea Configurazione
+            </button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        // Form validation
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const serialNumber = document.getElementById('serialNumber').value;
+            const templateId = document.getElementById('templateId').value;
+
+            if (!serialNumber || !templateId) {
+                e.preventDefault();
+                alert('Compila tutti i campi obbligatori');
+                return false;
+            }
+
+            console.log('Form submitted', { serialNumber, templateId });
+        });
+    </script>
+}

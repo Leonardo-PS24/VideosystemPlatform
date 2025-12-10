@@ -82,8 +82,8 @@
                         }
                     </div>
                     <div class="app-card-footer">
-                        <a href="@app.Url" class="btn btn-primary w-100" target="_blank">
-                            <span class="material-icons">open_in_new</span>
+                        <a asp-controller="Apps" asp-action="View" asp-route-appId="@app.AppId" class="btn btn-primary w-100">
+                            <span class="material-icons">launch</span>
                             Apri Applicazione
                         </a>
                     </div>
