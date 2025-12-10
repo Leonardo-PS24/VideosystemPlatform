@@ -1,0 +1,185 @@
+@model Platform.Apps.KioskConfiguration.Models.KioskConfigurationEntity
+
+@{
+    ViewData["Title"] = $"Dettagli Configurazione - {Model.SerialNumber}";
+}
+
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <h2 class="page-title">
+            <span class="material-icons align-middle me-2">info</span>
+            Dettagli Configurazione Kiosk
+        </h2>
+        <div>
+            <a asp-controller="Configuration" asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-vs-primary me-2">
+                <span class="material-icons align-middle">edit</span>
+                Modifica
+            </a>
+            <a asp-controller="Configuration" asp-action="Index" class="btn btn-outline-secondary">
+                <span class="material-icons align-middle">arrow_back</span>
+                Torna alla Lista
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="content-card">
+    <!-- Informazioni Generali -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h5 class="mb-3">Informazioni Generali</h5>
+            <table class="table table-sm">
+                <tr>
+                    <th style="width: 150px;">Serial Number:</th>
+                    <td><strong>@Model.SerialNumber</strong></td>
+                </tr>
+                <tr>
+                    <th>Template:</th>
+                    <td>@(Model.Template?.TemplateName ?? "N/D") <small class="text-muted">(v@(Model.Template?.Version ?? "N/D"))</small></td>
+                </tr>
+                <tr>
+                    <th>Stato:</th>
+                    <td>
+                        @switch (Model.Status)
+                        {
+                            case "Draft":
+                                <span class="badge bg-secondary">Bozza</span>
+                                break;
+                            case "InProgress":
+                                <span class="badge bg-primary">In Lavorazione</span>
+                                break;
+                            case "Completed":
+                                <span class="badge bg-success">Completata</span>
+                                break;
+                            case "Approved":
+                                <span class="badge bg-info">Approvata</span>
+                                break;
+                            case "Rejected":
+                                <span class="badge bg-danger">Rifiutata</span>
+                                break;
+                            default:
+                                <span class="badge bg-secondary">@Model.Status</span>
+                                break;
+                        }
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="col-md-6">
+            <h5 class="mb-3">Timeline</h5>
+            <table class="table table-sm">
+                <tr>
+                    <th style="width: 150px;">Creata il:</th>
+                    <td>@Model.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                </tr>
+                @if (Model.CompletedAt != null)
+                {
+                    <tr>
+                        <th>Completata il:</th>
+                        <td>@Model.CompletedAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                    </tr>
+                    <tr>
+                        <th>Completata da:</th>
+                        <td>@Model.CompletedBy</td>
+                    </tr>
+                }
+                @if (Model.ApprovedAt != null)
+                {
+                    <tr>
+                        <th>Approvata il:</th>
+                        <td>@Model.ApprovedAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                    </tr>
+                    <tr>
+                        <th>Approvata da:</th>
+                        <td>@Model.ApprovedBy</td>
+                    </tr>
+                }
+                @if (!string.IsNullOrEmpty(Model.RejectionReason))
+                {
+                    <tr>
+                        <th>Motivo Rifiuto:</th>
+                        <td><span class="text-danger">@Model.RejectionReason</span></td>
+                    </tr>
+                }
+                <tr>
+                    <th>Ultimo aggiornamento:</th>
+                    <td>@Model.UpdatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <hr class="my-4">
+
+    <!-- Campi Configurazione -->
+    <h5 class="mb-3">Campi Configurazione</h5>
+
+    @if (Model.FieldValues.Any())
+    {
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered">
+                <thead>
+                    <tr>
+                        <th>Campo</th>
+                        <th>Valore</th>
+                        <th>Aggiornato</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var field in Model.FieldValues)
+                    {
+                        <tr>
+                            <td><strong>@field.FieldPath</strong></td>
+                            <td>@(field.IsEncrypted ? "******" : field.FieldValue)</td>
+                            <td>@field.UpdatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            <span class="material-icons align-middle">info</span>
+            Nessun campo compilato per questa configurazione
+        </div>
+    }
+
+    <!-- Allegati -->
+    @if (Model.Attachments.Any())
+    {
+        <hr class="my-4">
+        <h5 class="mb-3">Allegati</h5>
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered">
+                <thead>
+                    <tr>
+                        <th>Nome File</th>
+                        <th>Tipo</th>
+                        <th>Dimensione</th>
+                        <th>Caricato il</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var attachment in Model.Attachments)
+                    {
+                        <tr>
+                            <td>@attachment.FileName</td>
+                            <td>@attachment.MimeType</td>
+                            <td>@((attachment.FileSize / 1024).ToString("N0")) KB</td>
+                            <td>@attachment.UploadedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        console.log('Details page loaded for configuration: @Model.Id');
+    </script>
+}

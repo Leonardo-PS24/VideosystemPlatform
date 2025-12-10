@@ -1,0 +1,146 @@
+@model List<Platform.Apps.KioskConfiguration.Models.KioskConfigurationEntity>
+
+@{
+    ViewData["Title"] = "Configurazioni Kiosk";
+}
+
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <h2 class="page-title">
+            <span class="material-icons align-middle me-2">devices</span>
+            Configurazioni Kiosk
+        </h2>
+        <a asp-controller="Configuration" asp-action="Create" class="btn btn-vs-primary">
+            <span class="material-icons align-middle">add</span>
+            Nuova Configurazione
+        </a>
+    </div>
+</div>
+
+<div class="content-card">
+    <div class="row">
+        <div class="col-md-12">
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <span class="material-icons align-middle">check_circle</span>
+                    @TempData["SuccessMessage"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+
+            @if (TempData["ErrorMessage"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <span class="material-icons align-middle">error</span>
+                    @TempData["ErrorMessage"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+
+            <div class="alert alert-info">
+                <span class="material-icons align-middle">info</span>
+                <strong>Benvenuto nell'applicazione Kiosk Configuration!</strong>
+                <p class="mb-0 mt-2">
+                    Qui puoi gestire le configurazioni dei kiosk aziendali.
+                    Clicca su "Nuova Configurazione" per iniziare.
+                </p>
+            </div>
+
+            <h5 class="mb-3">Configurazioni Recenti (@Model.Count)</h5>
+
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Serial Number</th>
+                            <th>Template</th>
+                            <th>Stato</th>
+                            <th>Data Creazione</th>
+                            <th>Completata da</th>
+                            <th style="width: 200px;">Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Any())
+                        {
+                            @foreach (var config in Model)
+                            {
+                                <tr>
+                                    <td><strong>@config.SerialNumber</strong></td>
+                                    <td>@(config.Template?.TemplateName ?? "N/D")</td>
+                                    <td>
+                                        @switch (config.Status)
+                                        {
+                                            case "Draft":
+                                                <span class="badge bg-secondary">Bozza</span>
+                                                break;
+                                            case "InProgress":
+                                                <span class="badge bg-primary">In Lavorazione</span>
+                                                break;
+                                            case "Completed":
+                                                <span class="badge bg-success">Completata</span>
+                                                break;
+                                            case "Approved":
+                                                <span class="badge bg-info">Approvata</span>
+                                                break;
+                                            case "Rejected":
+                                                <span class="badge bg-danger">Rifiutata</span>
+                                                break;
+                                            default:
+                                                <span class="badge bg-secondary">@config.Status</span>
+                                                break;
+                                        }
+                                    </td>
+                                    <td>@config.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td>@(config.CompletedBy ?? "-")</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a asp-controller="Configuration" asp-action="Edit" asp-route-id="@config.Id" class="btn btn-outline-primary" title="Modifica">
+                                                <span class="material-icons" style="font-size: 16px;">edit</span>
+                                            </a>
+                                            <a asp-controller="Configuration" asp-action="Details" asp-route-id="@config.Id" class="btn btn-outline-info" title="Dettagli">
+                                                <span class="material-icons" style="font-size: 16px;">visibility</span>
+                                            </a>
+                                            <button type="button" class="btn btn-outline-danger" onclick="confirmDelete('@config.Id', '@config.SerialNumber')" title="Elimina">
+                                                <span class="material-icons" style="font-size: 16px;">delete</span>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">
+                                    <span class="material-icons d-block mb-2" style="font-size: 48px;">inventory_2</span>
+                                    Nessuna configurazione presente. Crea la prima!
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Form nascosto per delete -->
+<form id="deleteForm" method="post" style="display:none;">
+    @Html.AntiForgeryToken()
+</form>
+
+@section Scripts {
+    <script>
+        function confirmDelete(id, serialNumber) {
+            if (confirm(`Sei sicuro di voler eliminare la configurazione "${serialNumber}"?\n\nQuesta azione non può essere annullata.`)) {
+                const form = document.getElementById('deleteForm');
+                form.action = `/Configuration/Delete/${id}`;
+                form.submit();
+            }
+        }
+
+        console.log('Kiosk Configuration Index page loaded - @Model.Count configurations');
+    </script>
+}
