@@ -30,9 +30,7 @@ public class PermissionService : IPermissionService
         _logger = logger;
     }
 
-    /// <summary>
-    /// Verifica se un utente ha un permesso specifico
-    /// </summary>
+    // ... (metodi esistenti non modificati) ...
     public async Task<bool> HasPermissionAsync(string userId, string applicationName, PermissionType permission)
     {
         // Admin ha sempre tutti i permessi
@@ -50,10 +48,6 @@ public class PermissionService : IPermissionService
 
         return userPermission.HasPermission(permission);
     }
-
-    /// <summary>
-    /// Verifica se un utente è amministratore
-    /// </summary>
     public async Task<bool> IsAdminAsync(string userId)
     {
         var user = await _userManager.FindByIdAsync(userId);
@@ -65,29 +59,17 @@ public class PermissionService : IPermissionService
         var roles = await _userManager.GetRolesAsync(user);
         return roles.Contains("Admin");
     }
-
-    /// <summary>
-    /// Ottiene tutti i permessi di un utente
-    /// </summary>
     public async Task<List<ApplicationPermission>> GetUserPermissionsAsync(string userId)
     {
         return await _context.ApplicationPermissions
             .Where(p => p.UserId == userId)
             .ToListAsync();
     }
-
-    /// <summary>
-    /// Ottiene il permesso specifico di un utente per un'applicazione
-    /// </summary>
     public async Task<ApplicationPermission?> GetPermissionAsync(string userId, string applicationName)
     {
         return await _context.ApplicationPermissions
             .FirstOrDefaultAsync(p => p.UserId == userId && p.ApplicationName == applicationName);
     }
-
-    /// <summary>
-    /// Concede un permesso a un utente
-    /// </summary>
     public async Task GrantPermissionAsync(string userId, string applicationName, PermissionType permission, string grantedBy)
     {
         var existingPermission = await GetPermissionAsync(userId, applicationName);
@@ -124,10 +106,6 @@ public class PermissionService : IPermissionService
 
         await _context.SaveChangesAsync();
     }
-
-    /// <summary>
-    /// Revoca un permesso da un utente
-    /// </summary>
     public async Task RevokePermissionAsync(string userId, string applicationName, PermissionType permission)
     {
         var existingPermission = await GetPermissionAsync(userId, applicationName);
@@ -157,10 +135,6 @@ public class PermissionService : IPermissionService
             await _context.SaveChangesAsync();
         }
     }
-
-    /// <summary>
-    /// Salva i permessi di un utente (batch)
-    /// </summary>
     public async Task SavePermissionsAsync(string userId, Dictionary<string, PermissionType> permissions, string grantedBy)
     {
         foreach (var kvp in permissions)
@@ -212,10 +186,6 @@ public class PermissionService : IPermissionService
             "Saved permissions for user {UserId} by {GrantedBy}",
             userId, grantedBy);
     }
-
-    /// <summary>
-    /// Elimina tutti i permessi di un utente
-    /// </summary>
     public async Task DeletePermissionsAsync(string userId)
     {
         var permissions = await GetUserPermissionsAsync(userId);
@@ -231,6 +201,7 @@ public class PermissionService : IPermissionService
         }
     }
 
+
     /// <summary>
     /// Ottiene la matrice permessi per tutti gli utenti
     /// </summary>
@@ -238,35 +209,26 @@ public class PermissionService : IPermissionService
     {
         try
         {
-            // Query base: tutti gli utenti con i loro permessi
-            var query = _context.ApplicationPermissions
-                .Include(p => p.User)
-                .AsQueryable();
-
-            // Filtro per ruolo
-            List<string>? filteredUserIds = null;
+            // 1. Ottieni tutti gli utenti o filtrali per ruolo
+            var usersQuery = _userManager.Users;
             if (!string.IsNullOrEmpty(roleFilter))
             {
                 var usersInRole = await _userManager.GetUsersInRoleAsync(roleFilter);
-                filteredUserIds = usersInRole.Select(u => u.Id).ToList();
-                query = query.Where(p => filteredUserIds.Contains(p.UserId));
+                var userIdsInRole = usersInRole.Select(u => u.Id).ToList();
+                usersQuery = usersQuery.Where(u => userIdsInRole.Contains(u.Id));
             }
+            var users = await usersQuery.ToListAsync();
 
-            // Filtro per applicazione
+            // 2. Ottieni tutti i permessi necessari in una sola query
+            var userIds = users.Select(u => u.Id).ToList();
+            var permissionsQuery = _context.ApplicationPermissions.Where(p => userIds.Contains(p.UserId));
             if (!string.IsNullOrEmpty(applicationFilter))
             {
-                query = query.Where(p => p.ApplicationName == applicationFilter);
+                permissionsQuery = permissionsQuery.Where(p => p.ApplicationName == applicationFilter);
             }
+            var allPermissions = await permissionsQuery.ToListAsync();
 
-            var permissions = await query.ToListAsync();
-
-            // Ottieni tutti gli utenti unici
-            var uniqueUserIds = permissions.Select(p => p.UserId).Distinct().ToList();
-            var users = await _context.Users
-                .Where(u => uniqueUserIds.Contains(u.Id))
-                .ToListAsync();
-
-            // Ottieni ruoli per ogni utente
+            // 3. Ottieni i ruoli per ogni utente
             var userRoles = new Dictionary<string, string>();
             foreach (var user in users)
             {
@@ -274,12 +236,12 @@ public class PermissionService : IPermissionService
                 userRoles[user.Id] = roles.FirstOrDefault() ?? "User";
             }
 
-            // Applicazioni da mostrare
+            // 4. Definisci le applicazioni da mostrare
             var applications = string.IsNullOrEmpty(applicationFilter)
                 ? ApplicationName.GetAll()
                 : new List<string> { applicationFilter };
 
-            // Crea le righe del ViewModel
+            // 5. Costruisci il ViewModel
             var userRows = users.Select(user => new UserPermissionRow
             {
                 UserId = user.Id,
@@ -291,7 +253,7 @@ public class PermissionService : IPermissionService
                     app => app,
                     app =>
                     {
-                        var perm = permissions.FirstOrDefault(p => p.UserId == user.Id && p.ApplicationName == app);
+                        var perm = allPermissions.FirstOrDefault(p => p.UserId == user.Id && p.ApplicationName == app);
                         return new AppPermissions
                         {
                             PermissionId = perm?.Id ?? 0,

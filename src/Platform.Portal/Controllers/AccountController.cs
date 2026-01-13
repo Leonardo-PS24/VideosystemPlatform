@@ -53,13 +53,11 @@ public class AccountController : Controller
 
         if (ModelState.IsValid)
         {
-            // Prova a trovare l'utente per username o email
             var user = await _userManager.FindByNameAsync(model.Username) 
                 ?? await _userManager.FindByEmailAsync(model.Username);
 
             if (user != null)
             {
-                // Verifica se l'utente è attivo
                 if (!user.IsActive)
                 {
                     ModelState.AddModelError(string.Empty, "Utente disabilitato. Contattare l'amministratore.");
@@ -97,6 +95,62 @@ public class AccountController : Controller
             else
             {
                 ModelState.AddModelError(string.Empty, "Credenziali non valide.");
+            }
+        }
+
+        return View(model);
+    }
+
+    /// <summary>
+    /// Mostra la pagina per impostare la password per la prima volta
+    /// </summary>
+    [HttpGet]
+    [AllowAnonymous]
+    public IActionResult SetPassword(string userId, string token)
+    {
+        if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(token))
+        {
+            return BadRequest("Link non valido o scaduto.");
+        }
+
+        var model = new SetPasswordViewModel { UserId = userId, Token = token };
+        return View(model);
+    }
+
+    /// <summary>
+    /// Imposta la password e fa il login
+    /// </summary>
+    [HttpPost]
+    [AllowAnonymous]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SetPassword(SetPasswordViewModel model)
+    {
+        if (ModelState.IsValid)
+        {
+            var user = await _userManager.FindByIdAsync(model.UserId);
+            if (user == null)
+            {
+                ModelState.AddModelError(string.Empty, "Utente non trovato.");
+                return View(model);
+            }
+
+            // Imposta la password
+            var result = await _userManager.ResetPasswordAsync(user, model.Token, model.Password);
+
+            if (result.Succeeded)
+            {
+                _logger.LogInformation($"Utente {user.UserName} ha impostato la sua password.");
+
+                // Esegui il login automatico
+                await _signInManager.SignInAsync(user, isPersistent: false);
+
+                TempData["SuccessMessage"] = "Password impostata con successo. Benvenuto!";
+                return RedirectToAction("Index", "Home");
+            }
+
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
             }
         }
 

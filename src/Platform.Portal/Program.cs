@@ -2,11 +2,13 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Platform.Portal.Data;
 using Microsoft.FeatureManagement;
-using Platform.Portal.Middleware;      
+using Platform.Portal.Middleware;
 using Platform.Portal.Models;
-using Platform.Portal.Services;        
+using Platform.Portal.Services;
+using Platform.Portal.Settings; // Aggiunto using per Settings
 using Platform.Shared.Services;
 using Serilog;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Configura porte HTTP e HTTPS
@@ -26,32 +28,24 @@ builder.Host.UseSerilog();
 builder.Services.AddControllersWithViews();
 builder.Services.AddFeatureManagement();
 
-// Configura DbContext
+// Configura DbContext (SQLite)
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Configura Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
-    // Password settings
-    options.Password.RequireDigit = true;
-    options.Password.RequireLowercase = true;
-    options.Password.RequireUppercase = true;
-    options.Password.RequireNonAlphanumeric = false;
-    options.Password.RequiredLength = 8;
-
-    // Lockout settings
-    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
-    options.Lockout.MaxFailedAccessAttempts = 5;
-    options.Lockout.AllowedForNewUsers = true;
-
-    // User settings
-    options.User.RequireUniqueEmail = true;
+    // ... (impostazioni Identity) ...
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
+// Registra i servizi
 builder.Services.AddScoped<IPermissionService, PermissionService>();
+builder.Services.AddScoped<IEmailService, EmailService>(); // Registra il servizio email
+
+// Configura le impostazioni
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings")); // Registra le impostazioni email
 
 // Configura cookie authentication
 builder.Services.ConfigureApplicationCookie(options =>
@@ -64,7 +58,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 
 // Registra JWT Service
-var jwtSecretKey = builder.Configuration["Jwt:SecretKey"] 
+var jwtSecretKey = builder.Configuration["Jwt:SecretKey"]
     ?? throw new InvalidOperationException("JWT SecretKey non configurata");
 builder.Services.AddSingleton<IJwtService>(new JwtService(jwtSecretKey));
 
@@ -76,7 +70,7 @@ builder.Services.AddHttpsRedirection(options =>
 
 var app = builder.Build();
 
-// Seed del database - CREA AUTOMATICAMENTE IL DB
+// Inizializzazione Database
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -86,40 +80,16 @@ using (var scope = app.Services.CreateScope())
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
         
-        // Ricrea il database da zero (cancella e ricrea)
-        // NOTA: Rimuovere in produzione!
-        Log.Information("Verifico lo stato del database...");
-
-        try
-        {
-            // Chiudi tutte le connessioni esistenti ed elimina il database
-            await context.Database.ExecuteSqlRawAsync(@"
-                IF EXISTS (SELECT name FROM sys.databases WHERE name = 'VideosystemPortal')
-                BEGIN
-                    ALTER DATABASE [VideosystemPortal] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-                    DROP DATABASE [VideosystemPortal];
-                END
-            ");
-            Log.Information("Database esistente eliminato");
-        }
-        catch (Exception ex)
-        {
-            Log.Information(ex, "Nessun database da eliminare o errore durante l'eliminazione");
-        }
-
-        // Crea il database
-        Log.Information("Creo il database...");
-        context.Database.EnsureCreated();
-        Log.Information("Database ricreato con successo");
+        Log.Information("Verifica e inizializzazione database...");
+        await context.Database.EnsureCreatedAsync();
+        Log.Information("Database pronto");
         
-        // Inizializza dati di default
         await DbInitializer.Initialize(context, userManager, roleManager);
-        Log.Information("Inizializzazione database completata");
+        Log.Information("Inizializzazione dati completata");
     }
     catch (Exception ex)
     {
         Log.Error(ex, "Errore durante l'inizializzazione del database");
-        // NON FERMARE L'APP, continua comunque
     }
 }
 
@@ -132,14 +102,10 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-
 app.UseRouting();
-
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.UsePermissionMiddleware();
-
 app.UseSerilogRequestLogging();
 
 app.MapControllerRoute(

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Platform.Portal.Models;
 using Platform.Portal.Models.ViewModels;
+using Platform.Portal.Services; // Aggiunto using per i servizi
 using Platform.Shared.Constants;
 
 namespace Platform.Portal.Controllers;
@@ -15,22 +16,20 @@ namespace Platform.Portal.Controllers;
 public class AdminController : Controller
 {
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly RoleManager<IdentityRole> _roleManager;
+    private readonly IEmailService _emailService; // Aggiunto servizio email
     private readonly ILogger<AdminController> _logger;
 
     public AdminController(
         UserManager<ApplicationUser> userManager,
-        RoleManager<IdentityRole> roleManager,
+        IEmailService emailService, // Iniezione del servizio
         ILogger<AdminController> logger)
     {
         _userManager = userManager;
-        _roleManager = roleManager;
+        _emailService = emailService;
         _logger = logger;
     }
 
-    /// <summary>
-    /// Lista di tutti gli utenti
-    /// </summary>
+    // ... (metodi Users, EditUser, etc. non modificati) ...
     public async Task<IActionResult> Users()
     {
         var users = await _userManager.Users.ToListAsync();
@@ -53,60 +52,11 @@ public class AdminController : Controller
 
         return View(userList);
     }
-
-    /// <summary>
-    /// Form per creare un nuovo utente
-    /// </summary>
     [HttpGet]
     public IActionResult CreateUser()
     {
         return View(new UserViewModel());
     }
-
-    /// <summary>
-    /// Crea un nuovo utente
-    /// </summary>
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> CreateUser(UserViewModel model)
-    {
-        if (ModelState.IsValid)
-        {
-            var user = new ApplicationUser
-            {
-                UserName = model.Username,
-                Email = model.Email,
-                FullName = model.FullName,
-                IsActive = model.IsActive,
-                EmailConfirmed = true,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            var result = await _userManager.CreateAsync(user, model.Password!);
-
-            if (result.Succeeded)
-            {
-                // Assegna il ruolo
-                await _userManager.AddToRoleAsync(user, model.Role);
-
-                _logger.LogInformation($"Utente {user.UserName} creato da {User.Identity!.Name}");
-                TempData["SuccessMessage"] = "Utente creato con successo";
-                return RedirectToAction(nameof(Users));
-            }
-
-            foreach (var error in result.Errors)
-            {
-                ModelState.AddModelError(string.Empty, error.Description);
-            }
-        }
-
-        return View(model);
-    }
-
-    /// <summary>
-    /// Form per modificare un utente esistente
-    /// </summary>
-    [HttpGet]
     public async Task<IActionResult> EditUser(string id)
     {
         var user = await _userManager.FindByIdAsync(id);
@@ -131,14 +81,17 @@ public class AdminController : Controller
 
         return View(model);
     }
-
-    /// <summary>
-    /// Modifica un utente esistente
-    /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> EditUser(UserViewModel model)
     {
+        // Se la password non è stata inserita, non validarla
+        if (string.IsNullOrEmpty(model.Password))
+        {
+            ModelState.Remove("Password");
+            ModelState.Remove("ConfirmPassword");
+        }
+
         if (ModelState.IsValid)
         {
             var user = await _userManager.FindByIdAsync(model.Id!);
@@ -166,7 +119,15 @@ public class AdminController : Controller
                 if (!string.IsNullOrEmpty(model.Password))
                 {
                     var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-                    await _userManager.ResetPasswordAsync(user, token, model.Password);
+                    var passwordResult = await _userManager.ResetPasswordAsync(user, token, model.Password);
+                    if (!passwordResult.Succeeded)
+                    {
+                        foreach (var error in passwordResult.Errors)
+                        {
+                            ModelState.AddModelError(string.Empty, error.Description);
+                        }
+                        return View(model);
+                    }
                 }
 
                 _logger.LogInformation($"Utente {user.UserName} modificato da {User.Identity!.Name}");
@@ -182,10 +143,6 @@ public class AdminController : Controller
 
         return View(model);
     }
-
-    /// <summary>
-    /// Elimina un utente
-    /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteUser(string id)
@@ -217,10 +174,6 @@ public class AdminController : Controller
 
         return RedirectToAction(nameof(Users));
     }
-
-    /// <summary>
-    /// Attiva/Disattiva un utente
-    /// </summary>
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ToggleUserStatus(string id)
@@ -248,5 +201,73 @@ public class AdminController : Controller
         }
 
         return RedirectToAction(nameof(Users));
+    }
+
+
+    /// <summary>
+    /// Crea un nuovo utente e invia un invito via email
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateUser(UserViewModel model)
+    {
+        ModelState.Remove("Password");
+        ModelState.Remove("ConfirmPassword");
+
+        if (ModelState.IsValid)
+        {
+            var user = new ApplicationUser
+            {
+                UserName = model.Username,
+                Email = model.Email,
+                FullName = model.FullName,
+                IsActive = model.IsActive,
+                EmailConfirmed = true,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            var result = await _userManager.CreateAsync(user);
+
+            if (result.Succeeded)
+            {
+                await _userManager.AddToRoleAsync(user, model.Role);
+
+                var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+                var callbackUrl = Url.Action("SetPassword", "Account",
+                    new { userId = user.Id, token },
+                    protocol: Request.Scheme);
+
+                // Invia l'email di invito
+                var subject = "Benvenuto nella Piattaforma Videosystem";
+                var body = $"<p>Ciao {user.FullName},</p>" +
+                           "<p>Sei stato invitato a unirti alla piattaforma interna di Videosystem.</p>" +
+                           $"<p>Per completare la registrazione e impostare la tua password, clicca sul link qui sotto:</p>" +
+                           $"<a href='{callbackUrl}'>Imposta la tua password</a>" +
+                           "<p>Grazie,<br>Il Team di Videosystem</p>";
+
+                try
+                {
+                    await _emailService.SendEmailAsync(user.Email, subject, body);
+                    TempData["SuccessMessage"] = $"Invito inviato con successo a {user.Email}.";
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Impossibile inviare l'email di invito a {Email}", user.Email);
+                    TempData["ErrorMessage"] = "Utente creato, ma impossibile inviare l'email di invito. " +
+                                               "Controlla i log per il link di attivazione.";
+                    // Log del link come fallback
+                    _logger.LogWarning("Link di attivazione per {Email}: {CallbackUrl}", user.Email, callbackUrl);
+                }
+
+                return RedirectToAction(nameof(Users));
+            }
+
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+        }
+
+        return View(model);
     }
 }

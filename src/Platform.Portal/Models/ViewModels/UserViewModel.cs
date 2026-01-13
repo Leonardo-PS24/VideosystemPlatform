@@ -31,13 +31,14 @@ public class UserViewModel
     [Display(Name = "Ruolo")]
     public string Role { get; set; } = string.Empty;
 
+    // La password è opzionale, usata solo per la modifica
     [DataType(DataType.Password)]
     [StringLength(100, ErrorMessage = "La password deve essere di almeno {2} caratteri", MinimumLength = 8)]
-    [Display(Name = "Password")]
+    [Display(Name = "Nuova Password")]
     public string? Password { get; set; }
 
     [DataType(DataType.Password)]
-    [Display(Name = "Conferma password")]
+    [Display(Name = "Conferma nuova password")]
     [Compare("Password", ErrorMessage = "Le password non coincidono")]
     public string? ConfirmPassword { get; set; }
 
