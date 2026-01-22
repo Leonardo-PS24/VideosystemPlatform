@@ -1,0 +1,40 @@
+﻿@model Platform.Shared.Models.KioskChecklistTemplate
+
+@{
+    ViewData["Title"] = "Nuovo Template";
+}
+
+<div class="container">
+    <h2>Nuovo Template Checklist</h2>
+    
+    <div class="card shadow-sm mt-4">
+        <div class="card-body">
+            <form asp-action="Create" method="post" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label asp-for="Name" class="form-label">Nome Modello</label>
+                    <input asp-for="Name" class="form-control" required />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+                
+                <div class="mb-3">
+                    <label asp-for="Description" class="form-label">Descrizione</label>
+                    <textarea asp-for="Description" class="form-control"></textarea>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">File JSON Struttura</label>
+                    <input type="file" name="jsonFile" class="form-control" accept=".json" required />
+                    <div class="form-text">Carica un file JSON contenente la definizione dei campi.</div>
+                </div>
+                
+                <div class="form-check mb-3">
+                    <input asp-for="IsActive" class="form-check-input" />
+                    <label asp-for="IsActive" class="form-check-label">Attivo</label>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Crea Template</button>
+                <a asp-action="Index" class="btn btn-secondary">Annulla</a>
+            </form>
+        </div>
+    </div>
+</div>

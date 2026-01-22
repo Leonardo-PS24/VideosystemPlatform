@@ -1,0 +1,25 @@
+﻿@{
+    ViewData["Title"] = "Errore";
+}
+
+<div class="text-center py-5">
+    <div class="mb-4">
+        <span class="material-icons text-danger" style="font-size: 64px;">error_outline</span>
+    </div>
+    <h1 class="text-danger">Si è verificato un errore</h1>
+    <p class="lead text-muted">Impossibile completare la richiesta.</p>
+    
+    @if (ViewData["RequestId"] != null)
+    {
+        <p>
+            <strong>Request ID:</strong> <code>@ViewData["RequestId"]</code>
+        </p>
+    }
+    
+    <div class="mt-4">
+        <a href="/" class="btn btn-primary">
+            <span class="material-icons">home</span>
+            Torna alla Home
+        </a>
+    </div>
+</div>

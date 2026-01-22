@@ -1,0 +1,282 @@
+﻿@model ConfigurationKiosk.Models.KioskCompileViewModel
+
+@{
+    ViewData["Title"] = "Compilazione Checklist";
+}
+
+<div class="container-fluid">
+    <!-- Header con Freccia Indietro -->
+    <div class="d-flex align-items-center mb-4">
+        <a asp-action="Index" class="btn btn-outline-secondary me-3 rounded-circle p-2" title="Torna alla lista">
+            <span class="material-icons" style="line-height: 1;">arrow_back</span>
+        </a>
+        
+        <div class="flex-grow-1">
+            <h2 class="mb-0">@Model.Template.Name</h2>
+            <small class="text-muted">Matricola: @Model.Instance.MachineSerialNumber</small>
+        </div>
+        
+        <div>
+            <a asp-action="History" asp-route-id="@Model.Instance.Id" class="btn btn-info text-white">
+                <span class="material-icons align-middle">history</span> Storico
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div id="checklist-container">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Caricamento...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Pulsante Salva in fondo -->
+            <div class="card shadow-sm mt-4 mb-5">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <span id="completion-status" class="text-muted">Compila tutti i campi obbligatori per completare.</span>
+                    </div>
+                    <button id="btnSave" class="btn btn-primary btn-lg px-5">
+                        <span class="material-icons align-middle me-2">save</span> Salva e Esci
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card sticky-top" style="top: 20px;">
+                <div class="card-header">Info</div>
+                <div class="card-body">
+                    <p><strong>Stato:</strong> <span id="status-badge" class="badge @(Model.Instance.Status == "Completed" ? "bg-success" : "bg-warning")">@Model.Instance.Status</span></p>
+                    <p><strong>Creato da:</strong> @Model.Instance.CreatedBy</p>
+                    <p><strong>Data:</strong> @Model.Instance.CreatedAt.ToString("g")</p>
+                    @if (Model.Instance.CompletedAt.HasValue)
+                    {
+                        <p><strong>Completato il:</strong> @Model.Instance.CompletedAt.Value.ToString("g")</p>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.Template.Description))
+                    {
+                        <hr/>
+                        <p class="small text-muted">@Model.Template.Description</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let templateStructure = null;
+        let currentData = {};
+
+        try {
+            templateStructure = @Html.Raw(string.IsNullOrWhiteSpace(Model.Template.StructureJson) ? "{}" : Model.Template.StructureJson);
+        } catch (e) {
+            console.error("Errore JSON:", e);
+            $('#checklist-container').html('<div class="alert alert-danger">Errore critico nel formato del template JSON.</div>');
+        }
+
+        try {
+            currentData = @Html.Raw(string.IsNullOrEmpty(Model.Instance.DataJson) ? "{}" : Model.Instance.DataJson);
+        } catch (e) {
+            console.error("Errore Data:", e);
+        }
+        
+        const instanceId = @Model.Instance.Id;
+
+        $(document).ready(function() {
+            if (templateStructure) {
+                if (templateStructure.steps && Array.isArray(templateStructure.steps)) {
+                    templateStructure.sections = [{
+                        title: "Checklist",
+                        fields: templateStructure.steps
+                    }];
+                }
+                renderChecklist(templateStructure, currentData);
+            }
+
+            $('#btnSave').click(function() {
+                const isComplete = checkCompletion();
+                const status = isComplete ? 'Completed' : 'InProgress';
+                saveData(status);
+            });
+        });
+
+        function renderChecklist(structure, data) {
+            const container = $('#checklist-container');
+            container.empty();
+
+            if (!structure || !structure.sections || !Array.isArray(structure.sections)) {
+                container.html('<div class="alert alert-warning">Struttura checklist non valida.</div>');
+                return;
+            }
+
+            structure.sections.forEach(section => {
+                const card = $('<div class="card mb-4 shadow-sm"></div>');
+                const header = $('<div class="card-header bg-light"><h5>' + (section.title || 'Sezione') + '</h5></div>');
+                const body = $('<div class="card-body"></div>');
+
+                if (section.fields && Array.isArray(section.fields)) {
+                    section.fields.forEach(field => {
+                        const formGroup = $('<div class="mb-4 field-container" data-required="' + (field.required ? 'true' : 'false') + '"></div>');
+                        const labelText = field.label || field.id;
+                        const label = $('<label class="form-label fw-bold">' + labelText + '</label>');
+                        
+                        if (field.required) {
+                            label.append(' <span class="text-danger">*</span>');
+                        }
+
+                        if (field.description) {
+                            formGroup.append('<div class="form-text mb-2">' + field.description + '</div>');
+                        }
+
+                        let input;
+                        const value = data[field.id] || '';
+
+                        if (field.type === 'checkbox') {
+                            formGroup.addClass('form-check');
+                            label.removeClass('form-label fw-bold').addClass('form-check-label fw-bold');
+                            input = $('<input type="checkbox" class="form-check-input checklist-field" data-id="' + field.id + '">');
+                            if (value === true || value === 'true' || value === true) input.prop('checked', true);
+                            formGroup.append(input);
+                            formGroup.append(label);
+                        } 
+                        else if (field.type === 'text' || field.type === 'number') {
+                            formGroup.prepend(label);
+                            input = $('<input type="' + field.type + '" class="form-control checklist-field" data-id="' + field.id + '">');
+                            if (field.placeholder) input.attr('placeholder', field.placeholder);
+                            if (field.min !== undefined) input.attr('min', field.min);
+                            if (field.max !== undefined) input.attr('max', field.max);
+                            input.val(value);
+                            formGroup.append(input);
+                        } 
+                        else if (field.type === 'textarea') {
+                            formGroup.prepend(label);
+                            input = $('<textarea class="form-control checklist-field" rows="3" data-id="' + field.id + '"></textarea>');
+                            if (field.placeholder) input.attr('placeholder', field.placeholder);
+                            input.val(value);
+                            formGroup.append(input);
+                        }
+                        else if (field.type === 'select') {
+                            formGroup.prepend(label);
+                            input = $('<select class="form-select checklist-field" data-id="' + field.id + '"></select>');
+                            input.append('<option value="">Seleziona...</option>');
+                            if (field.options && Array.isArray(field.options)) {
+                                field.options.forEach(opt => {
+                                    const optVal = (typeof opt === 'object') ? opt.value : opt;
+                                    const optLabel = (typeof opt === 'object') ? opt.label : opt;
+                                    const isSelected = value === optVal ? 'selected' : '';
+                                    input.append('<option value="' + optVal + '" ' + isSelected + '>' + optLabel + '</option>');
+                                });
+                            }
+                            input.val(value);
+                            formGroup.append(input);
+                        }
+                        else if (field.type === 'multiselect') {
+                            formGroup.prepend(label);
+                            const multiContainer = $('<div class="border rounded p-2"></div>');
+                            if (field.options && Array.isArray(field.options)) {
+                                field.options.forEach((opt, idx) => {
+                                    const optVal = (typeof opt === 'object') ? opt.value : opt;
+                                    const optLabel = (typeof opt === 'object') ? opt.label : opt;
+                                    const isChecked = Array.isArray(value) && value.includes(optVal);
+                                    
+                                    const checkDiv = $('<div class="form-check"></div>');
+                                    const checkInput = $('<input type="checkbox" class="form-check-input checklist-field-multi" data-parent-id="' + field.id + '" value="' + optVal + '">');
+                                    if (isChecked) checkInput.prop('checked', true);
+                                    
+                                    checkDiv.append(checkInput);
+                                    checkDiv.append('<label class="form-check-label">' + optLabel + '</label>');
+                                    multiContainer.append(checkDiv);
+                                });
+                            }
+                            formGroup.append(multiContainer);
+                        }
+                        else if (field.type === 'link') {
+                            formGroup.prepend(label);
+                            const btn = $('<a href="' + field.url + '" target="_blank" class="btn btn-outline-info d-block text-start"><span class="material-icons align-middle me-2">link</span>' + (field.button_text || field.url) + '</a>');
+                            formGroup.append(btn);
+                        }
+
+                        body.append(formGroup);
+                    });
+                }
+
+                card.append(header);
+                card.append(body);
+                container.append(card);
+            });
+        }
+
+        function collectData() {
+            const data = {};
+            $('.checklist-field').each(function() {
+                const el = $(this);
+                const id = el.data('id');
+                if (el.attr('type') === 'checkbox') {
+                    data[id] = el.is(':checked');
+                } else {
+                    data[id] = el.val();
+                }
+            });
+            $('.checklist-field-multi:checked').each(function() {
+                const el = $(this);
+                const parentId = el.data('parent-id');
+                if (!data[parentId]) data[parentId] = [];
+                data[parentId].push(el.val());
+            });
+            return data;
+        }
+
+        function checkCompletion() {
+            let isComplete = true;
+            $('.field-container[data-required="true"]').each(function() {
+                const container = $(this);
+                const input = container.find('.checklist-field');
+                if (input.length > 0) {
+                    if (input.attr('type') === 'checkbox') {
+                        if (!input.is(':checked')) isComplete = false;
+                    } else {
+                        if (!input.val()) isComplete = false;
+                    }
+                }
+                const multi = container.find('.checklist-field-multi');
+                if (multi.length > 0) {
+                    if (container.find('.checklist-field-multi:checked').length === 0) isComplete = false;
+                }
+            });
+            return isComplete;
+        }
+
+        function saveData(status) {
+            const data = collectData();
+            const btnSave = $('#btnSave');
+            const originalText = btnSave.text();
+            btnSave.prop('disabled', true).text('Salvataggio...');
+            
+            $.ajax({
+                url: '@Url.Action("Save", "Kiosk")',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    instanceId: instanceId,
+                    dataJson: JSON.stringify(data),
+                    status: status
+                }),
+                success: function() {
+                    // Redirect automatico alla home
+                    window.location.href = '@Url.Action("Index", "Kiosk")';
+                },
+                error: function(xhr, status, error) {
+                    console.error("Errore salvataggio:", error);
+                    alert('Errore durante il salvataggio.');
+                    btnSave.prop('disabled', false).text(originalText);
+                }
+            });
+        }
+    </script>
+}

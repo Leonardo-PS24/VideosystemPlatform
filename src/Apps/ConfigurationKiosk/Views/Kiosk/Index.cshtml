@@ -1,0 +1,106 @@
+﻿@model ConfigurationKiosk.Models.KioskDashboardViewModel
+
+@{
+    ViewData["Title"] = "Configuration Kiosk";
+}
+
+<div class="container-fluid">
+    <h1 class="mb-4">Configuration Kiosk</h1>
+
+    <div class="row mb-5">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Nuova Configurazione</h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Create" method="post">
+                        <div class="mb-3">
+                            <label for="templateId" class="form-label">Modello Macchina</label>
+                            <select name="templateId" class="form-select" required>
+                                <option value="">Seleziona un modello...</option>
+                                @foreach (var template in Model.AvailableTemplates)
+                                {
+                                    <option value="@template.Id">@template.Name (v.@template.Version)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="machineSerial" class="form-label">Numero di Serie / Matricola</label>
+                            <input type="text" name="machineSerial" class="form-control" required placeholder="Es. SN-12345" />
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">Inizia Configurazione</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-body d-flex align-items-center justify-content-center text-center">
+                    <div>
+                        <h3>Benvenuto nel Kiosk</h3>
+                        <p class="text-muted">Seleziona un modello per iniziare o riprendi una configurazione esistente.</p>
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <a asp-controller="KioskAdmin" asp-action="Index" class="btn btn-outline-secondary">Gestione Template (Admin)</a>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h5 class="mb-0">Configurazioni Recenti</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Modello</th>
+                            <th>Matricola</th>
+                            <th>Stato</th>
+                            <th>Utente</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.RecentInstances)
+                        {
+                            <tr>
+                                <td>@item.CreatedAt.ToString("g")</td>
+                                <td>@item.Template?.Name</td>
+                                <td>@item.MachineSerialNumber</td>
+                                <td>
+                                    <span class="badge @(item.Status == "Completed" ? "bg-success" : "bg-warning")">
+                                        @item.Status
+                                    </span>
+                                </td>
+                                <td>@item.CreatedBy</td>
+                                <td>
+                                    <a asp-action="Compile" asp-route-id="@item.Id" class="btn btn-sm btn-primary">
+                                        @(item.Status == "Completed" ? "Visualizza" : "Continua")
+                                    </a>
+                                    <a asp-action="History" asp-route-id="@item.Id" class="btn btn-sm btn-info text-white">
+                                        Storico
+                                    </a>
+                                    @if (User.IsInRole("Admin"))
+                                    {
+                                        <form asp-action="DeleteInstance" method="post" class="d-inline ms-1" onsubmit="return confirm('Sei sicuro di voler eliminare questa configurazione?');">
+                                            <input type="hidden" name="id" value="@item.Id" />
+                                            <button type="submit" class="btn btn-sm btn-danger">Elimina</button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

@@ -8,24 +8,9 @@ namespace Platform.Portal.Models;
 public static class ApplicationName
 {
     /// <summary>
-    /// Applicazione di registrazione kiosk
+    /// Applicazione Configuration Kiosk
     /// </summary>
-    public const string KioskRegistration = "KioskRegistration";
-    
-    /// <summary>
-    /// Sistema di tracciamento bug
-    /// </summary>
-    public const string BugTracking = "BugTracking";
-    
-    /// <summary>
-    /// Sistema di richieste funzionalità
-    /// </summary>
-    public const string FeatureRequest = "FeatureRequest";
-    
-    /// <summary>
-    /// Dashboard sviluppatori
-    /// </summary>
-    public const string DeveloperDashboard = "DeveloperDashboard";
+    public const string ConfigurationKiosk = "ConfigurationKiosk";
     
     /// <summary>
     /// Ottiene tutte le applicazioni disponibili
@@ -34,10 +19,7 @@ public static class ApplicationName
     {
         return new List<string>
         {
-            KioskRegistration,
-            BugTracking,
-            FeatureRequest,
-            DeveloperDashboard
+            ConfigurationKiosk
         };
     }
     
@@ -48,10 +30,7 @@ public static class ApplicationName
     {
         return applicationName switch
         {
-            KioskRegistration => "Kiosk Registration",
-            BugTracking => "Bug Tracking",
-            FeatureRequest => "Feature Request",
-            DeveloperDashboard => "Developer Dashboard",
+            ConfigurationKiosk => "Configuration Kiosk",
             _ => applicationName
         };
     }
@@ -63,10 +42,7 @@ public static class ApplicationName
     {
         return applicationName switch
         {
-            KioskRegistration => "devices",
-            BugTracking => "bug_report",
-            FeatureRequest => "lightbulb",
-            DeveloperDashboard => "code",
+            ConfigurationKiosk => "fact_check",
             _ => "apps"
         };
     }

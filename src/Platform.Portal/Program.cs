@@ -43,6 +43,7 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 // Registra i servizi
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<IEmailService, EmailService>(); // Registra il servizio email
+builder.Services.AddScoped<IKioskService, KioskService>(); // Registra il servizio Kiosk
 
 // Configura le impostazioni
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings")); // Registra le impostazioni email

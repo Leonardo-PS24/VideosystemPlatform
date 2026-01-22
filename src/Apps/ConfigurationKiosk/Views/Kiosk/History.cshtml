@@ -1,0 +1,71 @@
+﻿@model ConfigurationKiosk.Models.KioskHistoryViewModel
+
+@{
+    ViewData["Title"] = "Storico Modifiche";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0">Storico Modifiche</h2>
+            <p class="text-muted mb-0">
+                Configurazione: <strong>@Model.Instance.MachineSerialNumber</strong> 
+                (@Model.Instance.Template.Name)
+            </p>
+        </div>
+        <a asp-action="Index" class="btn btn-outline-secondary">Torna Indietro</a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            @if (!Model.History.Any())
+            {
+                <div class="alert alert-info">Nessuna modifica registrata nello storico.</div>
+            }
+            else
+            {
+                <div class="timeline">
+                    @foreach (var item in Model.History)
+                    {
+                        <div class="card mb-3 border-start border-4 @(item.Action == "Created" ? "border-success" : item.Action == "Completed" ? "border-primary" : "border-warning")">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <h5 class="card-title">
+                                        @if (item.Action == "Created")
+                                        {
+                                            <span class="badge bg-success">Creazione</span>
+                                        }
+                                        else if (item.Action == "Completed")
+                                        {
+                                            <span class="badge bg-primary">Completamento</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning text-dark">Modifica</span>
+                                        }
+                                    </h5>
+                                    <small class="text-muted">@item.Timestamp.ToLocalTime().ToString("g")</small>
+                                </div>
+                                <p class="card-text">
+                                    <strong>Utente:</strong> @item.UserId<br/>
+                                    <strong>Stato:</strong> @item.Status
+                                    @if (!string.IsNullOrEmpty(item.Notes))
+                                    {
+                                        <br/><strong>Note:</strong> <em>@item.Notes</em>
+                                    }
+                                </p>
+                                
+                                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#json_@item.Id">
+                                    Mostra Dati JSON
+                                </button>
+                                <div class="collapse mt-2" id="json_@item.Id">
+                                    <pre class="bg-light p-2 rounded border" style="max-height: 200px; overflow: auto;">@item.DataJson</pre>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>

@@ -1,0 +1,55 @@
+﻿{
+  "sections": [
+    {
+      "title": "Controlli Preliminari",
+      "fields": [
+        {
+          "id": "safety_check",
+          "type": "checkbox",
+          "label": "Dispositivi di sicurezza verificati"
+        },
+        {
+          "id": "power_cable",
+          "type": "checkbox",
+          "label": "Cavo di alimentazione integro"
+        }
+      ]
+    },
+    {
+      "title": "Configurazione Sistema",
+      "fields": [
+        {
+          "id": "firmware_version",
+          "type": "text",
+          "label": "Versione Firmware Installata"
+        },
+        {
+          "id": "operation_mode",
+          "type": "select",
+          "label": "Modalità Operativa",
+          "options": [
+            "Standard",
+            "Eco",
+            "Turbo",
+            "Diagnostica"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Note Finali",
+      "fields": [
+        {
+          "id": "final_notes",
+          "type": "text",
+          "label": "Eventuali anomalie riscontrate"
+        },
+        {
+          "id": "qa_passed",
+          "type": "checkbox",
+          "label": "Controllo Qualità Superato"
+        }
+      ]
+    }
+  ]
+}

@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Platform.Shared\Platform.Shared.csproj" />
+    <ProjectReference Include="..\Apps\ConfigurationKiosk\ConfigurationKiosk.csproj" />
   </ItemGroup>
 
 </Project>

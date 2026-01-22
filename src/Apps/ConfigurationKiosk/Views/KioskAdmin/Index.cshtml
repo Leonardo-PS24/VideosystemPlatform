@@ -1,0 +1,67 @@
+﻿@model List<Platform.Shared.Models.KioskChecklistTemplate>
+
+@{
+    ViewData["Title"] = "Gestione Template Checklist";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Gestione Template Checklist</h1>
+        <a asp-action="Create" class="btn btn-primary">Nuovo Template</a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Descrizione</th>
+                        <th>Versione</th>
+                        <th>Stato</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@item.Id</td>
+                            <td>@item.Name</td>
+                            <td>@item.Description</td>
+                            <td>@item.Version</td>
+                            <td>
+                                @if (item.IsActive)
+                                {
+                                    <span class="badge bg-success">Attivo</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Disattivo</span>
+                                }
+                            </td>
+                            <td>
+                                <form asp-action="ToggleStatus" method="post" class="d-inline">
+                                    <input type="hidden" name="id" value="@item.Id" />
+                                    <button type="submit" class="btn btn-sm @(item.IsActive ? "btn-warning" : "btn-success")">
+                                        @(item.IsActive ? "Disattiva" : "Attiva")
+                                    </button>
+                                </form>
+                                
+                                <form asp-action="Delete" method="post" class="d-inline ms-1" onsubmit="return confirm('Sei sicuro di voler eliminare questo template?');">
+                                    <input type="hidden" name="id" value="@item.Id" />
+                                    <button type="submit" class="btn btn-sm btn-danger">Elimina</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div class="mt-3">
+        <a asp-controller="Kiosk" asp-action="Index" class="btn btn-secondary">Torna al Kiosk</a>
+    </div>
+</div>

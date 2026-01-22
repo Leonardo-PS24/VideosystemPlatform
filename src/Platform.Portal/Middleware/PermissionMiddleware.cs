@@ -39,10 +39,7 @@ public class PermissionMiddleware
     // Mapping route -> applicazione
     private static readonly (string Route, string Application)[] RouteMapping = new[]
     {
-        ("/kiosk", ApplicationName.KioskRegistration),
-        ("/bugs", ApplicationName.BugTracking),
-        ("/features", ApplicationName.FeatureRequest),
-        ("/developer", ApplicationName.DeveloperDashboard)
+        ("/kiosk", ApplicationName.ConfigurationKiosk)
     };
 
     public PermissionMiddleware(RequestDelegate next, ILogger<PermissionMiddleware> logger)

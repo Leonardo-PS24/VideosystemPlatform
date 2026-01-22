@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Platform.Portal.Models;
+using Platform.Shared.Models;
 
 namespace Platform.Portal.Data;
 
@@ -15,6 +16,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     }
 
     public DbSet<ApplicationPermission> ApplicationPermissions { get; set; }
+    public DbSet<KioskChecklistTemplate> KioskChecklistTemplates { get; set; }
+    public DbSet<KioskChecklistInstance> KioskChecklistInstances { get; set; }
+    public DbSet<KioskChecklistHistory> KioskChecklistHistories { get; set; } // Aggiunto
     
     protected override void OnModelCreating(ModelBuilder builder)
     {
