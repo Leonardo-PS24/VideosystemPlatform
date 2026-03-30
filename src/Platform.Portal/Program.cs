@@ -7,12 +7,13 @@ using Platform.Portal.Models;
 using Platform.Portal.Services;
 using Platform.Portal.Settings; // Aggiunto using per Settings
 using Platform.Shared.Services;
+using Platform.Portal.Hubs; // Aggiunto using per Hubs
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configura porte HTTP e HTTPS
-builder.WebHost.UseUrls("http://localhost:5000", "https://localhost:5001");
+// Configura porte HTTP e HTTPS per ascoltare su tutti gli IP
+builder.WebHost.UseUrls("http://*:5000", "https://*:5001");
 
 // Configura Serilog
 Log.Logger = new LoggerConfiguration()
@@ -26,6 +27,7 @@ builder.Host.UseSerilog();
 
 // Aggiungi servizi al container
 builder.Services.AddControllersWithViews();
+builder.Services.AddSignalR(); // Aggiunto SignalR
 builder.Services.AddFeatureManagement();
 
 // Configura DbContext (SQLite)
@@ -101,13 +103,17 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// Commentato per facilitare test in LAN senza certificati validi
+// app.UseHttpsRedirection(); 
+
 app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UsePermissionMiddleware();
 app.UseSerilogRequestLogging();
+
+app.MapHub<KioskHub>("/kioskhub"); // Mappa l'hub
 
 app.MapControllerRoute(
     name: "default",

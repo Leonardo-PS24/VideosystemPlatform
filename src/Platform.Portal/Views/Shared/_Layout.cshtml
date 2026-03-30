@@ -20,6 +20,9 @@
 @if (User.Identity?.IsAuthenticated == true)
 {
     <div class="wrapper">
+        <!-- Sidebar Overlay (Mobile) -->
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
         <!-- Sidebar -->
         <nav class="sidebar" id="sidebar">
             <div class="sidebar-header">
@@ -27,6 +30,10 @@
                     <span class="material-icons logo-icon">layers</span>
                     <span class="logo-text">Videosystem</span>
                 </div>
+                <!-- Close button for mobile -->
+                <button class="btn btn-link text-white d-lg-none ms-auto p-0" id="sidebarClose">
+                    <span class="material-icons">close</span>
+                </button>
             </div>
 
             <div class="sidebar-menu">
@@ -133,24 +140,61 @@ else
 <!-- Scripts -->
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<!-- SignalR -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
+
 <script>
-    // Sidebar Toggle Logic
     document.addEventListener('DOMContentLoaded', function() {
         const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebarClose = document.getElementById('sidebarClose');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
         const body = document.body;
         
-        // Ripristina stato salvato
-        const isCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
-        if (isCollapsed) {
-            body.classList.add('sidebar-collapsed');
+        // Funzione per gestire il toggle
+        function toggleSidebar() {
+            if (window.innerWidth >= 992) {
+                // Desktop: Collapse
+                body.classList.toggle('sidebar-collapsed');
+                localStorage.setItem('sidebar-collapsed', body.classList.contains('sidebar-collapsed'));
+            } else {
+                // Mobile: Open/Close Overlay
+                body.classList.toggle('sidebar-open');
+            }
+        }
+
+        // Ripristina stato salvato (solo desktop)
+        if (window.innerWidth >= 992) {
+            const isCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+            if (isCollapsed) {
+                body.classList.add('sidebar-collapsed');
+            }
         }
 
         if (sidebarToggle) {
-            sidebarToggle.addEventListener('click', function() {
-                body.classList.toggle('sidebar-collapsed');
-                localStorage.setItem('sidebar-collapsed', body.classList.contains('sidebar-collapsed'));
+            sidebarToggle.addEventListener('click', toggleSidebar);
+        }
+
+        if (sidebarClose) {
+            sidebarClose.addEventListener('click', function() {
+                body.classList.remove('sidebar-open');
             });
         }
+
+        if (sidebarOverlay) {
+            sidebarOverlay.addEventListener('click', function() {
+                body.classList.remove('sidebar-open');
+            });
+        }
+        
+        // Chiudi sidebar mobile al click su un link
+        const navLinks = document.querySelectorAll('.sidebar .nav-link');
+        navLinks.forEach(link => {
+            link.addEventListener('click', function() {
+                if (window.innerWidth < 992) {
+                    body.classList.remove('sidebar-open');
+                }
+            });
+        });
     });
 </script>
 @await RenderSectionAsync("Scripts", required: false)
