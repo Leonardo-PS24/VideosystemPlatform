@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Platform.Portal.Data;
 
@@ -10,9 +11,11 @@ using Platform.Portal.Data;
 namespace Platform.Portal.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260311144207_AddProgressToKioskInstance")]
+    partial class AddProgressToKioskInstance
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.0");
@@ -337,9 +340,6 @@ namespace Platform.Portal.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Progress")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Revision")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Status")

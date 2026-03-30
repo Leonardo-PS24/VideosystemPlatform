@@ -10,7 +10,19 @@ public interface IKioskService
     
     Task<KioskChecklistInstance> CreateInstanceAsync(int templateId, string machineSerial, string userId);
     Task<KioskChecklistInstance?> GetInstanceByIdAsync(int id);
-    Task UpdateInstanceDataAsync(int instanceId, string dataJson, string status, string userId);
+    
+    // Salva i dati
+    Task UpdateInstanceDataAsync(int instanceId, string dataJson, string userId);
+    
+    // Completa la prima volta
+    Task CompleteInstanceAsync(int instanceId, string userId);
+    
+    // Avvia una revisione (Admin) - Cambia stato a InRevision
+    Task StartRevisionAsync(int instanceId, string userId);
+    
+    // Finalizza una revisione (Admin) - Ritorna true se ci sono modifiche
+    Task<bool> FinalizeRevisionAsync(int instanceId, string dataJson, string userId);
+
     Task<List<KioskChecklistInstance>> GetRecentInstancesAsync();
     
     // Gestione Storico e Cancellazione
