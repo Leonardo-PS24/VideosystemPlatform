@@ -4,103 +4,315 @@
     ViewData["Title"] = "Configuration Kiosk";
 }
 
-<div class="container-fluid">
-    <h1 class="mb-4">Configuration Kiosk</h1>
+<style>
+    .kiosk-dashboard-container {
+        height: calc(100vh - 140px);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
 
-    <div class="row mb-5">
-        <div class="col-md-6">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Nuova Configurazione</h5>
-                </div>
-                <div class="card-body">
-                    <form asp-action="Create" method="post">
-                        <div class="mb-3">
-                            <label for="templateId" class="form-label">Modello Macchina</label>
-                            <select name="templateId" class="form-select" required>
-                                <option value="">Seleziona un modello...</option>
+    .kiosk-header-section {
+        flex-shrink: 0;
+        margin-bottom: 20px;
+    }
+
+    .kiosk-list-section {
+        flex-grow: 1;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        border: 1px solid #e0e0e0;
+    }
+
+    .kiosk-list-header {
+        padding: 15px 20px;
+        border-bottom: 1px solid #eee;
+        background: #f8f9fa;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .kiosk-table-container {
+        flex-grow: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch; /* Smooth scroll su iOS */
+    }
+
+    /* Progress Ring */
+    .progress-ring {
+        position: relative;
+        width: 40px;
+        height: 40px;
+    }
+
+    .progress-ring__circle {
+        transition: stroke-dashoffset 0.35s;
+        transform: rotate(-90deg);
+        transform-origin: 50% 50%;
+    }
+
+    .progress-ring__text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 10px;
+        font-weight: bold;
+        color: #666;
+    }
+
+    /* Riga Cliccabile */
+    .kiosk-row {
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .kiosk-row:hover {
+        background-color: #f1f8f5 !important;
+    }
+
+    /* Responsive Table */
+    @@media (max-width: 768px) {
+        .kiosk-dashboard-container {
+            height: auto; /* Lascia scrollare la pagina su mobile */
+            overflow: visible;
+        }
+        
+        .kiosk-list-section {
+            overflow: visible;
+        }
+        
+        .kiosk-table-container {
+            overflow-x: auto; /* Scroll orizzontale per la tabella */
+        }
+        
+        .hide-mobile {
+            display: none;
+        }
+        
+        .kiosk-list-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .kiosk-list-header .input-group {
+            width: 100% !important;
+        }
+        
+        /* Card creazione su mobile */
+        .kiosk-header-section .card-body .row {
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .kiosk-header-section form {
+            flex-direction: column;
+            width: 100%;
+        }
+        
+        .kiosk-header-section select, 
+        .kiosk-header-section input {
+            max-width: 100% !important;
+            width: 100%;
+        }
+        
+        .kiosk-header-section button {
+            width: 100%;
+        }
+    }
+</style>
+
+<div class="container-fluid kiosk-dashboard-container">
+    
+    <!-- Sezione Superiore: Creazione e Info -->
+    <div class="kiosk-header-section">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1 class="mb-0 fw-bold text-dark fs-4 fs-md-2">Configuration Kiosk</h1>
+            @if (User.IsInRole("Admin"))
+            {
+                <a asp-controller="KioskAdmin" asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                    <span class="material-icons align-middle me-1">settings</span> <span class="d-none d-md-inline">Gestione Template</span>
+                </a>
+            }
+        </div>
+
+        <div class="card shadow-sm border-0 bg-primary text-white" style="background: linear-gradient(135deg, var(--vs-green) 0%, var(--vs-green-dark) 100%) !important;">
+            <div class="card-body p-4">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h4 class="fw-bold mb-1">Nuova Configurazione</h4>
+                        <p class="mb-0 opacity-75">Seleziona un modello e inserisci la matricola.</p>
+                    </div>
+                    <div class="col-md-4">
+                        <form asp-action="Create" method="post" class="d-flex gap-2">
+                            <select name="templateId" class="form-select border-0" required style="max-width: 200px;">
+                                <option value="">Seleziona Modello...</option>
                                 @foreach (var template in Model.AvailableTemplates)
                                 {
-                                    <option value="@template.Id">@template.Name (v.@template.Version)</option>
+                                    <option value="@template.Id">@template.Name</option>
                                 }
                             </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="machineSerial" class="form-label">Numero di Serie / Matricola</label>
-                            <input type="text" name="machineSerial" class="form-control" required placeholder="Es. SN-12345" />
-                        </div>
-                        <button type="submit" class="btn btn-success w-100">Inizia Configurazione</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-body d-flex align-items-center justify-content-center text-center">
-                    <div>
-                        <h3>Benvenuto nel Kiosk</h3>
-                        <p class="text-muted">Seleziona un modello per iniziare o riprendi una configurazione esistente.</p>
-                        @if (User.IsInRole("Admin"))
-                        {
-                            <a asp-controller="KioskAdmin" asp-action="Index" class="btn btn-outline-secondary">Gestione Template (Admin)</a>
-                        }
+                            <input type="text" name="machineSerial" class="form-control border-0" required placeholder="Matricola (SN)" style="max-width: 150px;" />
+                            <button type="submit" class="btn btn-light text-primary fw-bold">
+                                <span class="material-icons">add</span>
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="card shadow-sm">
-        <div class="card-header">
-            <h5 class="mb-0">Configurazioni Recenti</h5>
+    <!-- Sezione Inferiore: Lista Scrollabile -->
+    <div class="kiosk-list-section">
+        <div class="kiosk-list-header">
+            <h5 class="mb-0 fw-bold text-secondary">Configurazioni Recenti</h5>
+            <div class="input-group" style="width: 300px;">
+                <span class="input-group-text bg-white border-end-0"><i class="material-icons text-muted" style="font-size: 20px;">search</i></span>
+                <input type="text" id="searchKiosk" class="form-control border-start-0 ps-0" placeholder="Cerca matricola o modello...">
+            </div>
         </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Data</th>
-                            <th>Modello</th>
-                            <th>Matricola</th>
-                            <th>Stato</th>
-                            <th>Utente</th>
-                            <th>Azioni</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var item in Model.RecentInstances)
-                        {
-                            <tr>
-                                <td>@item.CreatedAt.ToString("g")</td>
-                                <td>@item.Template?.Name</td>
-                                <td>@item.MachineSerialNumber</td>
-                                <td>
-                                    <span class="badge @(item.Status == "Completed" ? "bg-success" : "bg-warning")">
-                                        @item.Status
-                                    </span>
-                                </td>
-                                <td>@item.CreatedBy</td>
-                                <td>
-                                    <a asp-action="Compile" asp-route-id="@item.Id" class="btn btn-sm btn-primary">
-                                        @(item.Status == "Completed" ? "Visualizza" : "Continua")
+        
+        <div class="kiosk-table-container">
+            <table class="table table-hover align-middle mb-0" id="kioskTable">
+                <thead class="bg-light sticky-top" style="top: 0; z-index: 10;">
+                    <tr>
+                        <th class="ps-4">Stato</th>
+                        <th>Matricola</th>
+                        <th>Modello</th>
+                        <th class="hide-mobile">Data Creazione</th>
+                        <th class="hide-mobile">Utente</th>
+                        <th class="text-center">Progresso</th>
+                        <th class="text-end pe-4">Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.RecentInstances)
+                    {
+                        <tr class="kiosk-row" data-instance-id="@item.Id" onclick="window.location.href='@Url.Action("Compile", new { id = item.Id })'">
+                            <td class="ps-4">
+                                @if (item.Status == "Completed")
+                                {
+                                    <span class="badge bg-success rounded-pill"><i class="material-icons align-middle" style="font-size: 12px;">check</i> <span class="d-none d-md-inline">Completato</span></span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning text-dark rounded-pill"><i class="material-icons align-middle" style="font-size: 12px;">hourglass_empty</i> <span class="d-none d-md-inline">In Corso</span></span>
+                                }
+                            </td>
+                            <td class="fw-bold text-dark matricola-cell">@item.MachineSerialNumber</td>
+                            <td class="text-secondary model-cell">@item.Template?.Name</td>
+                            <td class="text-muted small hide-mobile">@item.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td class="hide-mobile">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-light rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px; font-size: 10px; font-weight: bold; color: var(--vs-green);">
+                                        @item.CreatedBy.Substring(0, 1).ToUpper()
+                                    </div>
+                                    <span class="small">@item.CreatedBy</span>
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <div class="progress-ring mx-auto" data-progress="@item.Progress">
+                                    <svg class="progress-ring__svg" width="40" height="40">
+                                        <circle class="progress-ring__circle-bg" stroke="#eee" stroke-width="3" fill="transparent" r="16" cx="20" cy="20"/>
+                                        <circle class="progress-ring__circle" stroke="var(--vs-green)" stroke-width="3" fill="transparent" r="16" cx="20" cy="20"/>
+                                    </svg>
+                                    <span class="progress-ring__text">@item.Progress%</span>
+                                </div>
+                            </td>
+                            <td class="text-end pe-4" onclick="event.stopPropagation()">
+                                <div class="btn-group">
+                                    <a href="@Url.Action("Compile", new { id = item.Id })?print=true" target="_blank" class="btn btn-sm btn-outline-secondary border-0" title="Stampa">
+                                        <span class="material-icons">print</span>
                                     </a>
-                                    <a asp-action="History" asp-route-id="@item.Id" class="btn btn-sm btn-info text-white">
-                                        Storico
+                                    
+                                    <a asp-action="History" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary border-0" title="Storico">
+                                        <span class="material-icons">history</span>
                                     </a>
+                                    
                                     @if (User.IsInRole("Admin"))
                                     {
-                                        <form asp-action="DeleteInstance" method="post" class="d-inline ms-1" onsubmit="return confirm('Sei sicuro di voler eliminare questa configurazione?');">
+                                        <form asp-action="DeleteInstance" method="post" class="d-inline" onsubmit="return confirm('Eliminare questa configurazione?');">
                                             <input type="hidden" name="id" value="@item.Id" />
-                                            <button type="submit" class="btn btn-sm btn-danger">Elimina</button>
+                                            <button type="submit" class="btn btn-sm btn-outline-danger border-0" title="Elimina">
+                                                <span class="material-icons">delete</span>
+                                            </button>
                                         </form>
                                     }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        function updateProgressRing(element, percent) {
+            const circle = element.querySelector('.progress-ring__circle');
+            const text = element.querySelector('.progress-ring__text');
+            const radius = circle.r.baseVal.value;
+            const circumference = radius * 2 * Math.PI;
+            
+            circle.style.strokeDasharray = `${circumference} ${circumference}`;
+            const offset = circumference - (percent / 100) * circumference;
+            circle.style.strokeDashoffset = offset;
+            
+            text.textContent = percent + '%';
+            
+            if (percent === 100) circle.style.stroke = 'var(--vs-green)';
+            else if (percent > 50) circle.style.stroke = '#f59e0b';
+            else circle.style.stroke = '#ef4444';
+        }
+
+        $(document).ready(function() {
+            // Ricerca
+            $('#searchKiosk').on('keyup', function() {
+                var value = $(this).val().toLowerCase();
+                $("#kioskTable tbody tr").filter(function() {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+                });
+            });
+
+            // Inizializzazione Progress Rings
+            $('.progress-ring').each(function() {
+                const percent = $(this).data('progress') || 0;
+                updateProgressRing(this, percent);
+            });
+
+            // SignalR Connection
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/kioskhub")
+                .build();
+
+            connection.on("UpdateProgress", function (instanceId, newProgress) {
+                const row = $(`tr[data-instance-id="${instanceId}"]`);
+                if (row.length) {
+                    const ring = row.find('.progress-ring')[0];
+                    updateProgressRing(ring, newProgress);
+                }
+            });
+            
+            connection.on("InstanceCompleted", function (instanceId) {
+                const row = $(`tr[data-instance-id="${instanceId}"]`);
+                if (row.length) {
+                    const ring = row.find('.progress-ring')[0];
+                    updateProgressRing(ring, 100);
+                    row.find('.badge').removeClass('bg-warning text-dark').addClass('bg-success').html('<i class="material-icons align-middle" style="font-size: 12px;">check</i> Completato');
+                }
+            });
+
+            connection.start().catch(err => console.error(err.toString()));
+        });
+    </script>
+}

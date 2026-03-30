@@ -2,65 +2,418 @@
 
 @{
     ViewData["Title"] = "Compilazione Checklist";
+    bool isCompleted = Model.Instance.Status == "Completed";
+    bool isInRevision = Model.Instance.Status == "InRevision";
+    bool isAdmin = User.IsInRole("Admin");
+    
+    // ReadOnly se è completato. Se è InRevision, è modificabile (solo da Admin tecnicamente, ma lo stato lo permette)
+    bool isReadOnly = isCompleted; 
 }
 
-<div class="container-fluid">
-    <!-- Header con Freccia Indietro -->
-    <div class="d-flex align-items-center mb-4">
-        <a asp-action="Index" class="btn btn-outline-secondary me-3 rounded-circle p-2" title="Torna alla lista">
-            <span class="material-icons" style="line-height: 1;">arrow_back</span>
+<!-- Stili CSS Personalizzati -->
+<style>
+    /* ... (Stili invariati) ... */
+    :root {
+        --primary-color: #00945E;
+        --primary-light: #e6f4ed;
+        --text-color: #333;
+        --border-color: #e0e0e0;
+        --bg-color: #f8f9fa;
+        --card-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        --radius: 8px;
+    }
+
+    body { background-color: var(--bg-color); }
+
+    .checklist-grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 20px;
+    }
+
+    .col-full { grid-column: span 12; }
+    .col-half { grid-column: span 6; }
+    .col-third { grid-column: span 4; }
+
+    @@media (max-width: 768px) {
+        .col-half, .col-third { grid-column: span 12; }
+    }
+
+    .section-card {
+        background: white;
+        border-radius: var(--radius);
+        box-shadow: var(--card-shadow);
+        margin-bottom: 30px;
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+        page-break-inside: avoid;
+    }
+
+    .section-header {
+        background-color: white;
+        padding: 20px 25px;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .section-title {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .section-body { padding: 25px; }
+
+    .field-wrapper { margin-bottom: 5px; }
+    .field-label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: var(--text-color);
+        font-size: 0.9rem;
+    }
+    .field-description {
+        font-size: 0.8rem;
+        color: #666;
+        margin-top: -4px;
+        margin-bottom: 8px;
+    }
+
+    .form-control-custom {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        font-size: 1rem;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .form-control-custom:focus {
+        border-color: var(--primary-color);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(0, 148, 94, 0.1);
+    }
+
+    /* Toggle Switch */
+    .toggle-switch {
+        display: flex;
+        background: #eee;
+        border-radius: 20px;
+        padding: 2px;
+        width: fit-content;
+        position: relative;
+        cursor: pointer;
+        user-select: none;
+    }
+    .toggle-option {
+        padding: 8px 20px;
+        border-radius: 18px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        z-index: 2;
+        transition: color 0.3s;
+        color: #666;
+    }
+    .toggle-option.active { color: white; }
+    .toggle-slider {
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        height: calc(100% - 4px);
+        width: 50%;
+        background-color: var(--primary-color);
+        border-radius: 18px;
+        transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+        z-index: 1;
+    }
+
+    /* File Upload */
+    .file-upload-wrapper {
+        border: 2px dashed var(--border-color);
+        border-radius: var(--radius);
+        padding: 20px;
+        text-align: center;
+        transition: border-color 0.2s;
+        background: #fafafa;
+        cursor: pointer;
+        position: relative;
+    }
+    .file-upload-wrapper:hover {
+        border-color: var(--primary-color);
+        background: var(--primary-light);
+    }
+    .file-preview {
+        max-width: 100%;
+        max-height: 150px;
+        margin-top: 10px;
+        border-radius: 4px;
+        display: none;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* Signature Pad */
+    .signature-pad-wrapper {
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius);
+        background: #fff;
+        position: relative;
+    }
+    canvas.signature-pad {
+        width: 100%;
+        height: 150px;
+        cursor: crosshair;
+        touch-action: none;
+    }
+    .signature-actions {
+        border-top: 1px solid #eee;
+        padding: 5px 10px;
+        display: flex;
+        justify-content: flex-end;
+        background: #f9f9f9;
+        border-radius: 0 0 var(--radius) var(--radius);
+    }
+    .btn-clear-sig {
+        font-size: 0.8rem;
+        color: #dc3545;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px 8px;
+    }
+    .btn-clear-sig:hover { text-decoration: underline; }
+
+    /* Checkbox */
+    .custom-checkbox-wrapper {
+        display: flex;
+        align-items: center;
+        padding: 10px;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        background: white;
+        cursor: pointer;
+    }
+    .custom-checkbox-wrapper:hover { border-color: var(--primary-color); }
+    .custom-checkbox {
+        width: 20px;
+        height: 20px;
+        margin-right: 10px;
+        accent-color: var(--primary-color);
+        cursor: pointer;
+    }
+
+    /* Read Only Mode */
+    .read-only-mode {
+        pointer-events: none;
+        opacity: 0.7;
+        background-color: #f9f9f9;
+    }
+    .read-only-mode .toggle-switch { background: #ddd; }
+    .read-only-mode .toggle-slider { background: #999; }
+
+    /* Print Styles */
+    @@media print {
+        .sidebar, .top-header, .btn, .no-print, .signature-actions, .file-upload-wrapper span, .file-upload-wrapper div { display: none !important; }
+        .main-content { margin-left: 0 !important; padding: 0 !important; }
+        .container-fluid { padding: 0 !important; }
+        .col-lg-9 { width: 100% !important; flex: 0 0 100%; max-width: 100%; }
+        .col-lg-3 { display: none !important; }
+        .section-card { box-shadow: none !important; border: 1px solid #000 !important; margin-bottom: 20px !important; break-inside: avoid; }
+        .section-header { background-color: #f0f0f0 !important; border-bottom: 1px solid #000 !important; color: #000 !important; }
+        .section-title { color: #000 !important; }
+        input, textarea, select { border: none !important; background: transparent !important; padding: 0 !important; font-weight: bold; }
+        .form-control-custom { border-bottom: 1px dotted #999 !important; border-radius: 0 !important; }
+        .toggle-switch { background: transparent !important; border: none !important; }
+        .toggle-slider { display: none !important; }
+        .toggle-option { display: none; color: #000 !important; font-weight: bold; border: 1px solid #000; padding: 2px 10px; border-radius: 4px; }
+        .toggle-option.active { display: block !important; background: #eee !important; }
+        .file-upload-wrapper { border: none !important; padding: 0 !important; }
+        .file-preview { max-height: 300px !important; display: block !important; }
+        .print-header { display: block !important; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+    }
+    .print-header { display: none; }
+    
+    /* Status Indicator */
+    .save-status {
+        font-size: 0.85rem;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        transition: color 0.3s;
+    }
+    .save-status.saving { color: var(--primary-color); }
+    .save-status.error { color: #dc3545; }
+    .save-status.warning { color: #f59e0b; font-weight: bold; }
+</style>
+
+<div class="container-fluid pb-5">
+    
+    <!-- Header Stampa -->
+    <div class="print-header">
+        <h1>@Model.Template.Name</h1>
+        <p><strong>Matricola:</strong> @Model.Instance.MachineSerialNumber | <strong>Data:</strong> @Model.Instance.CreatedAt.ToString("g")</p>
+    </div>
+
+    <!-- Header App -->
+    <div class="d-flex align-items-center mb-4 pt-3 no-print">
+        <a asp-action="Index" class="btn btn-outline-secondary me-3 rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;" title="Torna alla lista">
+            <span class="material-icons">arrow_back</span>
         </a>
         
         <div class="flex-grow-1">
-            <h2 class="mb-0">@Model.Template.Name</h2>
-            <small class="text-muted">Matricola: @Model.Instance.MachineSerialNumber</small>
+            <div class="d-flex align-items-center gap-3">
+                <h2 class="mb-0 fw-bold text-dark">@Model.Template.Name</h2>
+                <span class="badge bg-primary fs-5 px-3 py-2 rounded-pill shadow-sm">
+                    <span class="opacity-75 me-1 fw-normal">SN:</span> @Model.Instance.MachineSerialNumber
+                </span>
+                @if (Model.Instance.Revision > 0)
+                {
+                    <span class="badge bg-secondary fs-6 px-3 py-2 rounded-pill shadow-sm">
+                        Rev. @Model.Instance.Revision.ToString("00")
+                    </span>
+                }
+            </div>
+            <div class="d-flex align-items-center gap-3 mt-1">
+                <span class="text-muted small"><i class="material-icons align-middle" style="font-size: 14px;">event</i> Creata il: @Model.Instance.CreatedAt.ToString("g")</span>
+                <span id="save-status-indicator" class="save-status">
+                    @if (isInRevision)
+                    {
+                        <span class="material-icons" style="font-size: 16px;">edit_note</span>
+                        <span>In Revisione (Auto-save attivo)</span>
+                    }
+                    else if (isCompleted)
+                    {
+                        <span class="material-icons" style="font-size: 16px;">lock</span>
+                        <span>Sola Lettura</span>
+                    }
+                    else
+                    {
+                        <span class="material-icons" style="font-size: 16px;">cloud_done</span>
+                        <span>Tutte le modifiche salvate</span>
+                    }
+                </span>
+            </div>
         </div>
         
         <div>
-            <a asp-action="History" asp-route-id="@Model.Instance.Id" class="btn btn-info text-white">
-                <span class="material-icons align-middle">history</span> Storico
+            <a asp-action="History" asp-route-id="@Model.Instance.Id" class="btn btn-light text-primary border me-2">
+                <span class="material-icons align-middle me-1">history</span> Storico
             </a>
         </div>
     </div>
 
     <div class="row">
-        <div class="col-lg-8">
-            <div id="checklist-container">
+        <!-- Checklist -->
+        <div class="col-lg-9">
+            <div id="checklist-container" class="@(isReadOnly ? "read-only-mode" : "")">
                 <div class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Caricamento...</span>
-                    </div>
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2 text-muted">Caricamento checklist...</p>
                 </div>
             </div>
             
-            <!-- Pulsante Salva in fondo -->
-            <div class="card shadow-sm mt-4 mb-5">
-                <div class="card-body d-flex justify-content-between align-items-center">
-                    <div>
-                        <span id="completion-status" class="text-muted">Compila tutti i campi obbligatori per completare.</span>
+            <!-- Footer Actions -->
+            <div class="card shadow-sm mt-4 border-0 no-print">
+                <div class="card-body d-flex justify-content-between align-items-center p-4">
+                    <div class="d-flex align-items-center text-muted">
+                        <span class="material-icons me-2">info</span>
+                        @if (isCompleted)
+                        {
+                            <span id="status-text">Configurazione completata. @(isAdmin ? "Puoi avviare una revisione." : "Sola lettura.")</span>
+                        }
+                        else if (isInRevision)
+                        {
+                            <span id="status-text">MODALITÀ REVISIONE: Le modifiche vengono salvate automaticamente.</span>
+                        }
+                        else
+                        {
+                            <span>Le modifiche vengono salvate automaticamente.</span>
+                        }
                     </div>
-                    <button id="btnSave" class="btn btn-primary btn-lg px-5">
-                        <span class="material-icons align-middle me-2">save</span> Salva e Esci
-                    </button>
+                    
+                    <div class="d-flex gap-2">
+                        <!-- Dropdown Esporta -->
+                        <div class="btn-group dropup">
+                            <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span class="material-icons align-middle me-2">print</span> Azioni
+                            </button>
+                            <ul class="dropdown-menu shadow">
+                                <li><a class="dropdown-item" href="#" onclick="window.print()"><span class="material-icons align-middle me-2">print</span> Stampa / PDF</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#" onclick="exportToCsv()"><span class="material-icons align-middle me-2">table_view</span> Esporta CSV</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="exportToJson()"><span class="material-icons align-middle me-2">code</span> Esporta JSON</a></li>
+                            </ul>
+                        </div>
+
+                        @if (!isCompleted && !isInRevision)
+                        {
+                            <button id="btnComplete" class="btn btn-success btn-lg px-4 d-flex align-items-center">
+                                <span class="material-icons me-2">check_circle</span> Termina Configurazione
+                            </button>
+                        }
+                        else if (isCompleted && isAdmin)
+                        {
+                            <button id="btnStartRevision" class="btn btn-info btn-lg px-4 d-flex align-items-center">
+                                <span class="material-icons me-2">edit_note</span> Nuova Revisione
+                            </button>
+                        }
+                        else if (isInRevision && isAdmin)
+                        {
+                            <button id="btnFinalizeRevision" class="btn btn-warning btn-lg px-4 d-flex align-items-center">
+                                <span class="material-icons me-2">save_as</span> Salva Revisione
+                            </button>
+                        }
+                    </div>
                 </div>
             </div>
         </div>
         
-        <div class="col-lg-4">
-            <div class="card sticky-top" style="top: 20px;">
-                <div class="card-header">Info</div>
-                <div class="card-body">
-                    <p><strong>Stato:</strong> <span id="status-badge" class="badge @(Model.Instance.Status == "Completed" ? "bg-success" : "bg-warning")">@Model.Instance.Status</span></p>
-                    <p><strong>Creato da:</strong> @Model.Instance.CreatedBy</p>
-                    <p><strong>Data:</strong> @Model.Instance.CreatedAt.ToString("g")</p>
+        <!-- Sidebar Info -->
+        <div class="col-lg-3 no-print">
+            <div class="card border-0 shadow-sm sticky-top" style="top: 90px;">
+                <div class="card-header bg-white border-bottom-0 pt-4 px-4">
+                    <h5 class="mb-0 fw-bold">Stato Configurazione</h5>
+                </div>
+                <div class="card-body px-4 pb-4">
+                    <div class="mb-4 text-center">
+                        @if (isInRevision)
+                        {
+                            <span id="status-badge" class="badge rounded-pill px-3 py-2 fs-6 bg-warning text-dark">
+                                In Revisione
+                            </span>
+                        }
+                        else
+                        {
+                            <span id="status-badge" class="badge rounded-pill px-3 py-2 fs-6 @(isCompleted ? "bg-success" : "bg-warning text-dark")">
+                                @Model.Instance.Status
+                            </span>
+                        }
+                    </div>
+                    
+                    <!-- Progress Bar -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between mb-1">
+                            <small class="text-muted">Completamento</small>
+                            <small class="fw-bold" id="progress-text">0%</small>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div id="progress-bar" class="progress-bar bg-success" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">Basato sui campi modificati</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Creato da</small>
+                        <strong>@Model.Instance.CreatedBy</strong>
+                    </div>
+                    
                     @if (Model.Instance.CompletedAt.HasValue)
                     {
-                        <p><strong>Completato il:</strong> @Model.Instance.CompletedAt.Value.ToString("g")</p>
-                    }
-                    @if (!string.IsNullOrEmpty(Model.Template.Description))
-                    {
-                        <hr/>
-                        <p class="small text-muted">@Model.Template.Description</p>
+                        <div class="mb-3">
+                            <small class="text-muted d-block">Completato il</small>
+                            <strong>@Model.Instance.CompletedAt.Value.ToString("g")</strong>
+                        </div>
                     }
                 </div>
             </div>
@@ -68,198 +421,150 @@
     </div>
 </div>
 
+<!-- Modali -->
+<div class="modal fade" id="completeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-success">Conferma Completamento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Sei sicuro di voler terminare la configurazione? <br>Una volta terminata, <strong>non potrai più modificarla</strong>.</p>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                <button type="button" class="btn btn-success" id="confirmCompleteBtn">Termina</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="finalizeRevisionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-success">Conferma Revisione</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Vuoi salvare la revisione e bloccare nuovamente la configurazione?</p>
+                <p>Verrà creata una nuova revisione nello storico.</p>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                <button type="button" class="btn btn-success" id="confirmFinalizeBtn">Salva Revisione</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="validationModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-danger">Campi Mancanti</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Non puoi terminare la configurazione perché ci sono campi obbligatori non compilati.</p>
+                <p class="small text-muted">Controlla i campi segnati con l'asterisco rosso.</p>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Ho capito</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
+        // --- Variabili Globali ---
         let templateStructure = null;
         let currentData = {};
+        const instanceId = @Model.Instance.Id;
+        const machineSerial = "@Model.Instance.MachineSerialNumber";
+        let touchedFields = new Set();
+        let saveTimeout;
+        let totalFieldsCount = 0;
+        const currentUserId = '@User.Identity.Name';
+        const isCompleted = @isCompleted.ToString().ToLower();
+        const isInRevision = @isInRevision.ToString().ToLower();
+        const isAdmin = @isAdmin.ToString().ToLower();
 
+        // --- Parsing Iniziale ---
         try {
             templateStructure = @Html.Raw(string.IsNullOrWhiteSpace(Model.Template.StructureJson) ? "{}" : Model.Template.StructureJson);
-        } catch (e) {
-            console.error("Errore JSON:", e);
-            $('#checklist-container').html('<div class="alert alert-danger">Errore critico nel formato del template JSON.</div>');
-        }
+        } catch (e) { console.error("JSON Error:", e); }
 
         try {
             currentData = @Html.Raw(string.IsNullOrEmpty(Model.Instance.DataJson) ? "{}" : Model.Instance.DataJson);
-        } catch (e) {
-            console.error("Errore Data:", e);
-        }
-        
-        const instanceId = @Model.Instance.Id;
-
-        $(document).ready(function() {
-            if (templateStructure) {
-                if (templateStructure.steps && Array.isArray(templateStructure.steps)) {
-                    templateStructure.sections = [{
-                        title: "Checklist",
-                        fields: templateStructure.steps
-                    }];
-                }
-                renderChecklist(templateStructure, currentData);
+            if (currentData._touched) {
+                touchedFields = new Set(currentData._touched);
             }
+        } catch (e) { console.error("Data Error:", e); }
 
-            $('#btnSave').click(function() {
-                const isComplete = checkCompletion();
-                const status = isComplete ? 'Completed' : 'InProgress';
-                saveData(status);
-            });
-        });
-
-        function renderChecklist(structure, data) {
-            const container = $('#checklist-container');
-            container.empty();
-
-            if (!structure || !structure.sections || !Array.isArray(structure.sections)) {
-                container.html('<div class="alert alert-warning">Struttura checklist non valida.</div>');
-                return;
-            }
-
-            structure.sections.forEach(section => {
-                const card = $('<div class="card mb-4 shadow-sm"></div>');
-                const header = $('<div class="card-header bg-light"><h5>' + (section.title || 'Sezione') + '</h5></div>');
-                const body = $('<div class="card-body"></div>');
-
-                if (section.fields && Array.isArray(section.fields)) {
-                    section.fields.forEach(field => {
-                        const formGroup = $('<div class="mb-4 field-container" data-required="' + (field.required ? 'true' : 'false') + '"></div>');
-                        const labelText = field.label || field.id;
-                        const label = $('<label class="form-label fw-bold">' + labelText + '</label>');
-                        
-                        if (field.required) {
-                            label.append(' <span class="text-danger">*</span>');
-                        }
-
-                        if (field.description) {
-                            formGroup.append('<div class="form-text mb-2">' + field.description + '</div>');
-                        }
-
-                        let input;
-                        const value = data[field.id] || '';
-
-                        if (field.type === 'checkbox') {
-                            formGroup.addClass('form-check');
-                            label.removeClass('form-label fw-bold').addClass('form-check-label fw-bold');
-                            input = $('<input type="checkbox" class="form-check-input checklist-field" data-id="' + field.id + '">');
-                            if (value === true || value === 'true' || value === true) input.prop('checked', true);
-                            formGroup.append(input);
-                            formGroup.append(label);
-                        } 
-                        else if (field.type === 'text' || field.type === 'number') {
-                            formGroup.prepend(label);
-                            input = $('<input type="' + field.type + '" class="form-control checklist-field" data-id="' + field.id + '">');
-                            if (field.placeholder) input.attr('placeholder', field.placeholder);
-                            if (field.min !== undefined) input.attr('min', field.min);
-                            if (field.max !== undefined) input.attr('max', field.max);
-                            input.val(value);
-                            formGroup.append(input);
-                        } 
-                        else if (field.type === 'textarea') {
-                            formGroup.prepend(label);
-                            input = $('<textarea class="form-control checklist-field" rows="3" data-id="' + field.id + '"></textarea>');
-                            if (field.placeholder) input.attr('placeholder', field.placeholder);
-                            input.val(value);
-                            formGroup.append(input);
-                        }
-                        else if (field.type === 'select') {
-                            formGroup.prepend(label);
-                            input = $('<select class="form-select checklist-field" data-id="' + field.id + '"></select>');
-                            input.append('<option value="">Seleziona...</option>');
-                            if (field.options && Array.isArray(field.options)) {
-                                field.options.forEach(opt => {
-                                    const optVal = (typeof opt === 'object') ? opt.value : opt;
-                                    const optLabel = (typeof opt === 'object') ? opt.label : opt;
-                                    const isSelected = value === optVal ? 'selected' : '';
-                                    input.append('<option value="' + optVal + '" ' + isSelected + '>' + optLabel + '</option>');
-                                });
-                            }
-                            input.val(value);
-                            formGroup.append(input);
-                        }
-                        else if (field.type === 'multiselect') {
-                            formGroup.prepend(label);
-                            const multiContainer = $('<div class="border rounded p-2"></div>');
-                            if (field.options && Array.isArray(field.options)) {
-                                field.options.forEach((opt, idx) => {
-                                    const optVal = (typeof opt === 'object') ? opt.value : opt;
-                                    const optLabel = (typeof opt === 'object') ? opt.label : opt;
-                                    const isChecked = Array.isArray(value) && value.includes(optVal);
-                                    
-                                    const checkDiv = $('<div class="form-check"></div>');
-                                    const checkInput = $('<input type="checkbox" class="form-check-input checklist-field-multi" data-parent-id="' + field.id + '" value="' + optVal + '">');
-                                    if (isChecked) checkInput.prop('checked', true);
-                                    
-                                    checkDiv.append(checkInput);
-                                    checkDiv.append('<label class="form-check-label">' + optLabel + '</label>');
-                                    multiContainer.append(checkDiv);
-                                });
-                            }
-                            formGroup.append(multiContainer);
-                        }
-                        else if (field.type === 'link') {
-                            formGroup.prepend(label);
-                            const btn = $('<a href="' + field.url + '" target="_blank" class="btn btn-outline-info d-block text-start"><span class="material-icons align-middle me-2">link</span>' + (field.button_text || field.url) + '</a>');
-                            formGroup.append(btn);
-                        }
-
-                        body.append(formGroup);
+        // --- Funzioni Helper ---
+        function countTotalFields() {
+            let uniqueIds = new Set();
+            if (templateStructure && templateStructure.sections) {
+                templateStructure.sections.forEach(s => {
+                    if (s.fields) s.fields.forEach(f => {
+                        if (f.type !== 'link') uniqueIds.add(f.id);
                     });
-                }
-
-                card.append(header);
-                card.append(body);
-                container.append(card);
-            });
+                });
+            }
+            totalFieldsCount = uniqueIds.size;
         }
 
-        function collectData() {
-            const data = {};
+        function initTouchedFields() {
             $('.checklist-field').each(function() {
-                const el = $(this);
-                const id = el.data('id');
-                if (el.attr('type') === 'checkbox') {
-                    data[id] = el.is(':checked');
-                } else {
-                    data[id] = el.val();
+                const id = $(this).data('id');
+                const val = currentData[id];
+                if (val !== undefined && val !== null && val !== '') {
+                    touchedFields.add(id);
                 }
             });
-            $('.checklist-field-multi:checked').each(function() {
-                const el = $(this);
-                const parentId = el.data('parent-id');
-                if (!data[parentId]) data[parentId] = [];
-                data[parentId].push(el.val());
-            });
-            return data;
         }
 
-        function checkCompletion() {
-            let isComplete = true;
-            $('.field-container[data-required="true"]').each(function() {
-                const container = $(this);
-                const input = container.find('.checklist-field');
-                if (input.length > 0) {
-                    if (input.attr('type') === 'checkbox') {
-                        if (!input.is(':checked')) isComplete = false;
-                    } else {
-                        if (!input.val()) isComplete = false;
-                    }
-                }
-                const multi = container.find('.checklist-field-multi');
-                if (multi.length > 0) {
-                    if (container.find('.checklist-field-multi:checked').length === 0) isComplete = false;
-                }
-            });
-            return isComplete;
-        }
+        function updateProgress() {
+            // Se è completata E NON è in revisione, forza 100%
+            if (isCompleted && !isInRevision) {
+                $('#progress-bar').css('width', '100%');
+                $('#progress-text').text('100%');
+                return 100;
+            }
 
-        function saveData(status) {
-            const data = collectData();
-            const btnSave = $('#btnSave');
-            const originalText = btnSave.text();
-            btnSave.prop('disabled', true).text('Salvataggio...');
+            // In revisione o in progress: calcola
+            const filled = touchedFields.size;
+            const percent = totalFieldsCount > 0 ? Math.round((filled / totalFieldsCount) * 100) : 0;
+            const finalPercent = Math.min(percent, 100);
             
+            $('#progress-bar').css('width', finalPercent + '%');
+            $('#progress-text').text(finalPercent + '%');
+            
+            return finalPercent;
+        }
+
+        function triggerAutoSave() {
+            const indicator = $('#save-status-indicator');
+            indicator.removeClass('error warning').addClass('saving').html('<span class="spinner-border spinner-border-sm" style="width: 1rem; height: 1rem;"></span> Salvataggio...');
+            
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                saveData('InProgress', false, true);
+            }, 1500); 
+        }
+
+        function saveData(status, isCompleteAction, isAutoSave = false) {
+            const data = collectData();
+            data._progressPercent = updateProgress();
+            data._touched = Array.from(touchedFields);
+            
+            const endpoint = isCompleteAction ? '@Url.Action("Complete", "Kiosk")' : '@Url.Action("Save", "Kiosk")';
+
             $.ajax({
-                url: '@Url.Action("Save", "Kiosk")',
+                url: endpoint,
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify({
@@ -268,15 +573,292 @@
                     status: status
                 }),
                 success: function() {
-                    // Redirect automatico alla home
-                    window.location.href = '@Url.Action("Index", "Kiosk")';
+                    if (isCompleteAction) {
+                        window.location.href = '@Url.Action("Index", "Kiosk")';
+                    } else if (isAutoSave) {
+                        const indicator = $('#save-status-indicator');
+                        indicator.removeClass('saving').html('<span class="material-icons" style="font-size: 16px;">cloud_done</span> Tutte le modifiche salvate');
+                    } else {
+                        // Salvataggio manuale (se mai servisse)
+                    }
                 },
                 error: function(xhr, status, error) {
                     console.error("Errore salvataggio:", error);
-                    alert('Errore durante il salvataggio.');
-                    btnSave.prop('disabled', false).text(originalText);
+                    if (isAutoSave) {
+                        const indicator = $('#save-status-indicator');
+                        indicator.addClass('error').html('<span class="material-icons" style="font-size: 16px;">error</span> Errore salvataggio');
+                    } else {
+                        alert('Errore durante il salvataggio.');
+                    }
                 }
             });
         }
+
+        function startRevision() {
+            $.ajax({
+                url: '@Url.Action("StartRevision", "Kiosk")',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ instanceId: instanceId }),
+                success: function() {
+                    location.reload(); // Ricarica per attivare modalità InRevision
+                },
+                error: function() { alert('Errore avvio revisione.'); }
+            });
+        }
+
+        function finalizeRevision() {
+            const data = collectData();
+            
+            $.ajax({
+                url: '@Url.Action("FinalizeRevision", "Kiosk")',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    instanceId: instanceId,
+                    dataJson: JSON.stringify(data)
+                }),
+                success: function(response) {
+                    if (response.changesDetected === false) {
+                        alert('Nessuna modifica rilevata. La revisione è stata annullata e lo stato riportato a completato.');
+                    } else {
+                        alert('Revisione salvata con successo!');
+                    }
+                    location.reload(); 
+                },
+                error: function() {
+                    alert('Errore durante il salvataggio della revisione.');
+                }
+            });
+        }
+
+        function collectData() {
+            const data = {};
+            $('.checklist-field').each(function() {
+                const el = $(this);
+                const id = el.data('id');
+                if (el.attr('type') === 'checkbox') data[id] = el.is(':checked');
+                else data[id] = el.val();
+            });
+            return data;
+        }
+
+        function checkCompletion() {
+            let isComplete = true;
+            $('.field-wrapper[data-required="true"]').each(function() {
+                const container = $(this);
+                const input = container.find('.checklist-field');
+                if (input.val() === '' || (input.attr('type') === 'checkbox' && !input.is(':checked'))) {
+                    isComplete = false;
+                }
+            });
+            return isComplete;
+        }
+
+        function initToggle(id, value) {
+            const $wrapper = $(`#toggle-${id}`);
+            if ($wrapper.length === 0) return;
+            const $input = $wrapper.find('input');
+            const $slider = $wrapper.find('.toggle-slider');
+            const $opts = $wrapper.find('.toggle-option');
+            const initialVal = value || $opts.first().data('val');
+            const initialIdx = $opts.toArray().findIndex(el => $(el).data('val') == initialVal);
+            if (initialIdx >= 0) updateToggleUI($wrapper, initialIdx);
+            $opts.click(function() {
+                // In revisione o non completato è modificabile
+                if (isCompleted && !isInRevision) return; 
+                
+                const idx = $(this).index() - 1;
+                const val = $(this).data('val');
+                $input.val(val).trigger('change');
+                updateToggleUI($wrapper, idx);
+            });
+        }
+        function updateToggleUI($wrapper, idx) {
+            $wrapper.find('.toggle-option').removeClass('active').eq(idx).addClass('active');
+            $wrapper.find('.toggle-slider').css('transform', `translateX(${idx * 100}%)`);
+        }
+        function initFileUpload(id) {}
+        function initSignaturePad(id, savedData) {
+            const canvas = document.getElementById(`sig-${id}`);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            let isDrawing = false;
+            const ratio = Math.max(window.devicePixelRatio || 1, 1);
+            canvas.width = canvas.offsetWidth * ratio;
+            canvas.height = canvas.offsetHeight * ratio;
+            ctx.scale(ratio, ratio);
+            if (savedData) { const img = new Image(); img.onload = () => ctx.drawImage(img, 0, 0, canvas.offsetWidth, canvas.offsetHeight); img.src = savedData; }
+            function getPos(e) { const rect = canvas.getBoundingClientRect(); const clientX = e.touches ? e.touches[0].clientX : e.clientX; const clientY = e.touches ? e.touches[0].clientY : e.clientY; return { x: clientX - rect.left, y: clientY - rect.top }; }
+            function startDraw(e) { 
+                if (isCompleted && !isInRevision) return;
+                isDrawing = true; const pos = getPos(e); ctx.beginPath(); ctx.moveTo(pos.x, pos.y); 
+            }
+            function draw(e) { if (!isDrawing) return; const pos = getPos(e); ctx.lineTo(pos.x, pos.y); ctx.stroke(); e.preventDefault(); }
+            function endDraw() { if (isDrawing) { isDrawing = false; saveSignature(id); $(`input[data-id="${id}"]`).trigger('change'); } }
+            canvas.addEventListener('mousedown', startDraw); canvas.addEventListener('mousemove', draw); canvas.addEventListener('mouseup', endDraw);
+            canvas.addEventListener('touchstart', startDraw, { passive: false }); canvas.addEventListener('touchmove', draw, { passive: false }); canvas.addEventListener('touchend', endDraw);
+        }
+        function saveSignature(id) { const canvas = document.getElementById(`sig-${id}`); if (canvas) $(`input[data-id="${id}"]`).val(canvas.toDataURL()); }
+        window.clearSignature = function(id) { 
+            if (isCompleted && !isInRevision) return;
+            const canvas = document.getElementById(`sig-${id}`); if (canvas) { canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height); $(`input[data-id="${id}"]`).val('').trigger('change'); } 
+        };
+        window.handleFileSelect = function(input, id) { 
+            const file = input.files[0]; if (file) { const reader = new FileReader(); reader.onload = function(e) { $(`#preview-${id}`).attr('src', e.target.result).show(); $(`input[data-id="${id}"].checklist-field`).val(e.target.result).trigger('change'); }; reader.readAsDataURL(file); } 
+        };
+        
+        function renderChecklist(structure, data) {
+            const container = $('#checklist-container');
+            container.empty();
+            if (!structure?.sections?.length) return;
+
+            structure.sections.forEach((section, secIdx) => {
+                const sectionHtml = `
+                    <div class="section-card">
+                        <div class="section-header"><h3 class="section-title">${section.title || 'Sezione'}</h3></div>
+                        <div class="section-body"><div class="checklist-grid" id="grid-${secIdx}"></div></div>
+                    </div>`;
+                const $section = $(sectionHtml);
+                const $grid = $section.find(`#grid-${secIdx}`);
+                const fieldsToInit = [];
+
+                if (section.fields) {
+                    section.fields.forEach(field => {
+                        const fieldHtml = createField(field, data[field.id]);
+                        $grid.append(fieldHtml);
+                        if (['signature', 'toggle', 'file'].includes(field.type)) fieldsToInit.push(field);
+                    });
+                }
+                container.append($section);
+                fieldsToInit.forEach(field => {
+                    if (field.type === 'signature') initSignaturePad(field.id, data[field.id]);
+                    if (field.type === 'toggle') initToggle(field.id, data[field.id]);
+                    if (field.type === 'file') initFileUpload(field.id);
+                });
+            });
+        }
+
+        function createField(field, value) {
+            let widthClass = 'col-full';
+            if (field.width === 'half') widthClass = 'col-half';
+            if (field.width === 'third') widthClass = 'col-third';
+            const requiredMark = field.required ? '<span class="text-danger">*</span>' : '';
+            const description = field.description ? `<div class="field-description">${field.description}</div>` : '';
+            let inputHtml = '';
+            const val = value || '';
+
+            switch (field.type) {
+                case 'text': case 'number': case 'date':
+                    inputHtml = `<input type="${field.type}" class="form-control-custom checklist-field" data-id="${field.id}" value="${val}" placeholder="${field.placeholder || ''}" ${field.min ? `min="${field.min}"` : ''} ${field.max ? `max="${field.max}"` : ''}>`;
+                    break;
+                case 'textarea':
+                    inputHtml = `<textarea class="form-control-custom checklist-field" rows="3" data-id="${field.id}" placeholder="${field.placeholder || ''}">${val}</textarea>`;
+                    break;
+                case 'checkbox':
+                    const checked = (val === true || val === 'true') ? 'checked' : '';
+                    inputHtml = `<label class="custom-checkbox-wrapper"><input type="checkbox" class="custom-checkbox checklist-field" data-id="${field.id}" ${checked}><span>${field.label}</span></label>`;
+                    break;
+                case 'toggle':
+                    const opt0 = field.options?.[0] || 'NO';
+                    const opt1 = field.options?.[1] || 'YES';
+                    inputHtml = `<div class="toggle-switch" id="toggle-${field.id}" data-id="${field.id}"><div class="toggle-slider"></div><div class="toggle-option" data-val="${opt0}">${opt0}</div><div class="toggle-option" data-val="${opt1}">${opt1}</div><input type="hidden" class="checklist-field" data-id="${field.id}" value="${val || opt0}"></div>`;
+                    break;
+                case 'file':
+                    inputHtml = `<div class="file-upload-wrapper" onclick="document.getElementById('file-${field.id}').click()"><input type="file" id="file-${field.id}" class="d-none" accept="${field.accept || '*/*'}" onchange="handleFileSelect(this, '${field.id}')"><span class="material-icons text-muted" style="font-size: 32px;">cloud_upload</span><div class="mt-1 text-muted small">Clicca per caricare</div><img id="preview-${field.id}" class="file-preview" src="${val ? val : ''}" style="${val ? 'display:block' : ''}"><input type="hidden" class="checklist-field" data-id="${field.id}" value="${val}"></div>`;
+                    break;
+                case 'signature':
+                    inputHtml = `<div class="signature-pad-wrapper"><canvas id="sig-${field.id}" class="signature-pad"></canvas><div class="signature-actions"><button type="button" class="btn-clear-sig" onclick="clearSignature('${field.id}')">Cancella</button></div><input type="hidden" class="checklist-field" data-id="${field.id}" value="${val}"></div>`;
+                    break;
+                case 'select':
+                    let optionsHtml = '<option value="">Seleziona...</option>';
+                    if (field.options) {
+                        field.options.forEach(opt => {
+                            const optVal = typeof opt === 'object' ? opt.value : opt;
+                            const optLabel = typeof opt === 'object' ? opt.label : opt;
+                            const selected = val === optVal ? 'selected' : '';
+                            optionsHtml += `<option value="${optVal}" ${selected}>${optLabel}</option>`;
+                        });
+                    }
+                    inputHtml = `<select class="form-control-custom checklist-field" data-id="${field.id}">${optionsHtml}</select>`;
+                    break;
+            }
+            const labelHtml = field.type === 'checkbox' ? '' : `<label class="field-label">${field.label} ${requiredMark}</label>`;
+            return `<div class="${widthClass} field-wrapper" data-required="${field.required ? 'true' : 'false'}">${labelHtml}${description}${inputHtml}</div>`;
+        }
+        
+        function exportToCsv() { /* ... */ }
+        function exportToJson() { /* ... */ }
+
+        // --- Main Execution ---
+        $(document).ready(function() {
+            if (templateStructure) {
+                if (templateStructure.steps && Array.isArray(templateStructure.steps)) {
+                    templateStructure.sections = [{ title: "Checklist", fields: templateStructure.steps }];
+                }
+                renderChecklist(templateStructure, currentData);
+                countTotalFields();
+                if (touchedFields.size === 0) initTouchedFields();
+                updateProgress();
+            }
+
+            // Gestione Revisione Admin
+            $('#btnStartRevision').click(function() {
+                startRevision(); // Chiama endpoint server e ricarica
+            });
+
+            $('#btnFinalizeRevision').click(function() {
+                const modal = new bootstrap.Modal(document.getElementById('finalizeRevisionModal'));
+                modal.show();
+            });
+
+            $('#confirmFinalizeBtn').click(function() {
+                finalizeRevision();
+            });
+
+            // SignalR Connection
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/kioskhub")
+                .build();
+
+            connection.on("DataUpdated", function (updatedByUserId) {
+                if (updatedByUserId !== currentUserId) {
+                    const indicator = $('#save-status-indicator');
+                    indicator.addClass('warning').html('<span class="material-icons" style="font-size: 16px;">warning</span> Modifiche rilevate da un altro utente! Ricaricare la pagina.');
+                }
+            });
+
+            connection.start().then(function () {
+                connection.invoke("JoinChecklistGroup", instanceId.toString());
+            }).catch(err => console.error(err.toString()));
+
+            // Termina Configurazione
+            $('#btnComplete').click(function() {
+                if (checkCompletion()) {
+                    const modal = new bootstrap.Modal(document.getElementById('completeModal'));
+                    modal.show();
+                } else {
+                    const modal = new bootstrap.Modal(document.getElementById('validationModal'));
+                    modal.show();
+                }
+            });
+
+            $('#confirmCompleteBtn').click(function() {
+                saveData('Completed', true);
+            });
+
+            // Auto-save listener
+            $(document).on('change input', '.checklist-field', function() {
+                // Salva se InProgress o InRevision
+                if (isCompleted && !isInRevision) return; 
+
+                const id = $(this).data('id');
+                if (id) {
+                    touchedFields.add(id);
+                    updateProgress();
+                    triggerAutoSave();
+                }
+            });
+        });
     </script>
 }

@@ -15,7 +15,7 @@ public class KioskChecklistTemplate : AuditableEntity
     public string Name { get; set; } = string.Empty;
 
     [MaxLength(500)]
-    public string Description { get; set; } = string.Empty;
+    public string? Description { get; set; } // Reso nullable per permettere stringhe vuote
 
     /// <summary>
     /// La struttura della checklist in formato JSON
