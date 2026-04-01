@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Platform.Portal.Models; // Aggiunto per i nuovi modelli
 
 namespace Platform.Portal.Controllers;
 
@@ -31,10 +32,18 @@ public class AppsController : Controller
             return RedirectToAction("Index", "Home");
         }
 
-        var applications = _configuration.GetSection("Applications").Get<List<ApplicationInfo>>()
-            ?? new List<ApplicationInfo>();
+        var companies = _configuration.GetSection("Companies").Get<List<CompanyInfo>>()
+            ?? new List<CompanyInfo>();
 
-        var app = applications.FirstOrDefault(a => a.AppId == appId);
+        ApplicationInfo? app = null;
+        foreach (var company in companies)
+        {
+            app = company.Applications.FirstOrDefault(a => a.AppId == appId);
+            if (app != null)
+            {
+                break;
+            }
+        }
 
         if (app == null)
         {
@@ -42,20 +51,9 @@ public class AppsController : Controller
             return NotFound();
         }
 
-        // Verifica permessi
-        var userRoles = User.Claims
-            .Where(c => c.Type == System.Security.Claims.ClaimTypes.Role)
-            .Select(c => c.Value)
-            .ToList();
-
-        if (!string.IsNullOrEmpty(app.RequiredRole) &&
-            !userRoles.Contains(app.RequiredRole) &&
-            !userRoles.Contains("Admin"))
-        {
-            _logger.LogWarning("Accesso negato all'applicazione {AppId} per l'utente {User}",
-                appId, User.Identity?.Name);
-            return Forbid();
-        }
+        // La logica dei permessi è ora gestita dal PermissionMiddleware
+        // e non più dal RequiredRole in ApplicationInfo.
+        // Se l'utente non ha accesso, il middleware dovrebbe già aver bloccato la richiesta.
 
         return View(app);
     }

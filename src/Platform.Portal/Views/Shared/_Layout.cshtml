@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Videosystem Platform</title>
     
+    <!-- PWA & Mobile App -->
+    <link rel="manifest" href="~/manifest.json" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="VS Platform" />
+    <link rel="apple-touch-icon" href="/images/icons/icon-192x192.png" />
+    <meta name="theme-color" content="#0096D7" />
+
     <!-- Fonts & Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -195,6 +204,19 @@ else
                 }
             });
         });
+
+        // Registrazione Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(registration => {
+                        console.log('Service Worker registrato con successo:', registration);
+                    })
+                    .catch(error => {
+                        console.log('Errore nella registrazione del Service Worker:', error);
+                    });
+            });
+        }
     });
 </script>
 @await RenderSectionAsync("Scripts", required: false)

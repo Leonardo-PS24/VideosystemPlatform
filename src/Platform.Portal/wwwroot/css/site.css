@@ -2,28 +2,45 @@
 /* Versione: 3.0.0 - Mobile First Optimization */
 
 :root {
-    /* Palette Colori */
-    --vs-green: #00945E;
-    --vs-green-dark: #007349;
-    --vs-green-light: #33a97e;
-    --vs-green-bg: #e6f4ed;
+    /* Palette Colori Aziendali */
+    --vs-primary: #0096D7;
+    --vs-secondary: #535E66;
+    --vs-neutral: #F5F7F8;
     
-    --text-primary: #1f2937;
-    --text-secondary: #6b7280;
+    /* Derivazioni Colori Primari */
+    --vs-primary-dark: #007AB3;
+    --vs-primary-light: #33A9E0;
+    --vs-primary-bg: #E6F5FB;
+    
+    /* Testi */
+    --text-primary: #212529;
+    --text-secondary: #535E66;
     --text-light: #9ca3af;
     
-    --bg-body: #f3f4f6;
+    /* Sfondi */
+    --bg-body: var(--vs-neutral);
     --bg-card: #ffffff;
     
-    --border-color: #e5e7eb;
+    /* Bordi */
+    --border-color: #DEE2E6;
+
+    /* Override Bootstrap 5 Variables */
+    --bs-primary: var(--vs-primary);
+    --bs-primary-rgb: 0, 150, 215;
+    --bs-secondary: var(--vs-secondary);
+    --bs-secondary-rgb: 83, 94, 102;
+    --bs-light: var(--vs-neutral);
+    --bs-light-rgb: 245, 247, 248;
+    --bs-body-bg: var(--bg-body);
+    --bs-body-color: var(--text-primary);
     
     /* Dimensioni */
     --sidebar-width: 260px;
     --sidebar-collapsed-width: 70px;
-    --header-height: 64px; /* Ridotto leggermente per mobile */
+    --header-height: 64px;
     --border-radius: 10px;
     
-    /* Transizioni */
+    /* Transizioni e Ombre */
     --transition-speed: 0.3s;
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -39,12 +56,12 @@ body {
 
 a {
     text-decoration: none;
-    color: var(--vs-green);
+    color: var(--vs-primary);
     transition: color 0.2s;
 }
 
 a:hover {
-    color: var(--vs-green-dark);
+    color: var(--vs-primary-dark);
 }
 
 /* ===== LAYOUT ===== */
@@ -58,7 +75,7 @@ a:hover {
 /* ===== SIDEBAR ===== */
 .sidebar {
     width: var(--sidebar-width);
-    background: linear-gradient(180deg, var(--vs-green) 0%, var(--vs-green-dark) 100%);
+    background: linear-gradient(180deg, var(--vs-primary) 0%, var(--vs-primary-dark) 100%);
     color: white;
     position: fixed;
     top: 0;
@@ -252,7 +269,7 @@ a:hover {
 
 .toggle-btn:hover {
     background-color: #f3f4f6;
-    color: var(--vs-green);
+    color: var(--vs-primary);
 }
 
 .page-title {
@@ -402,14 +419,14 @@ a:hover {
 .app-card:hover {
     transform: translateY(-5px);
     box-shadow: var(--shadow-md);
-    border: 1px solid var(--vs-green-light);
+    border: 1px solid var(--vs-primary-light);
 }
 
 .app-icon-container {
     width: 60px;
     height: 60px;
-    background-color: var(--vs-green-bg);
-    color: var(--vs-green);
+    background-color: var(--vs-primary-bg);
+    color: var(--vs-primary);
     border-radius: 15px;
     display: flex;
     align-items: center;
@@ -454,7 +471,7 @@ a:hover {
     flex-shrink: 0;
 }
 
-.stat-icon.green { background-color: rgba(0, 148, 94, 0.1); color: var(--vs-green); }
+.stat-icon.primary { background-color: rgba(0, 150, 215, 0.1); color: var(--vs-primary); }
 .stat-icon.blue { background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; }
 .stat-icon.orange { background-color: rgba(245, 158, 11, 0.1); color: #f59e0b; }
 
@@ -495,14 +512,14 @@ a:hover {
 }
 
 .btn-primary {
-    background-color: var(--vs-green);
-    border-color: var(--vs-green);
+    background-color: var(--vs-primary);
+    border-color: var(--vs-primary);
     color: white;
 }
 
 .btn-primary:hover {
-    background-color: var(--vs-green-dark);
-    border-color: var(--vs-green-dark);
+    background-color: var(--vs-primary-dark);
+    border-color: var(--vs-primary-dark);
     color: white;
 }
 
@@ -546,12 +563,12 @@ a:hover {
 }
 
 /* ===== UTILITIES ===== */
-.text-vs-green { color: var(--vs-green) !important; }
-.bg-vs-green { background-color: var(--vs-green) !important; }
+.text-vs-primary { color: var(--vs-primary) !important; }
+.bg-vs-primary { background-color: var(--vs-primary) !important; }
 
 /* Login Page Specifics */
 .login-page {
-    background: linear-gradient(135deg, var(--vs-green) 0%, var(--vs-green-dark) 100%);
+    background: linear-gradient(135deg, var(--vs-primary) 0%, var(--vs-primary-dark) 100%);
     min-height: 100vh;
     display: flex;
     align-items: center;

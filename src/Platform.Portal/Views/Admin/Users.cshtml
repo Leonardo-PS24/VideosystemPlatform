@@ -56,12 +56,12 @@
                             </td>
                             <td class="text-end">
                                 <div class="d-flex justify-content-end gap-2">
-                                    <a asp-action="EditUser" asp-route-id="@user.Id" class="btn btn-sm btn-outline-secondary" title="Modifica">
+                                    <a asp-action="EditUser" asp-route-id="@user.Id" class="btn btn-sm btn-outline-primary" title="Modifica">
                                         <span class="material-icons" style="font-size: 18px;">edit</span>
                                     </a>
                                     
                                     <form asp-action="ToggleUserStatus" asp-route-id="@user.Id" method="post" class="d-inline">
-                                        <button type="submit" class="btn btn-sm btn-outline-secondary" title="@(user.IsActive ? "Disattiva" : "Attiva")">
+                                        <button type="submit" class="btn btn-sm btn-outline-primary" title="@(user.IsActive ? "Disattiva" : "Attiva")">
                                             <span class="material-icons" style="font-size: 18px;">@(user.IsActive ? "block" : "check_circle")</span>
                                         </button>
                                     </form>

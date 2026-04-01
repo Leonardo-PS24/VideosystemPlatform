@@ -1,4 +1,4 @@
-@model List<Platform.Portal.Controllers.ApplicationInfo>
+@model List<Platform.Portal.Models.CompanyInfo>
 
 @{
     ViewData["Title"] = "Dashboard";
@@ -8,33 +8,20 @@
 <div class="row mb-4">
     @if (User.IsInRole("Admin"))
     {
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="card stat-card">
-                <div class="stat-icon green">
-                    <span class="material-icons">apps</span>
+                <div class="stat-icon primary">
+                    <span class="material-icons">business</span>
                 </div>
                 <div class="stat-info">
                     <h3>@(Model?.Count ?? 0)</h3>
-                    <p>Applicazioni</p>
+                    <p>Aziende Gestite</p>
                 </div>
             </div>
         </div>
-        
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="card stat-card">
-                <div class="stat-icon blue">
-                    <span class="material-icons">people</span>
-                </div>
-                <div class="stat-info">
-                    <h3>--</h3>
-                    <p>Utenti Attivi</p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-3">
-            <div class="card stat-card">
-                <div class="stat-icon orange">
+                <div class="stat-icon primary">
                     <span class="material-icons">schedule</span>
                 </div>
                 <div class="stat-info">
@@ -43,10 +30,9 @@
                 </div>
             </div>
         </div>
-        
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="card stat-card">
-                <div class="stat-icon green">
+                <div class="stat-icon primary">
                     <span class="material-icons">dns</span>
                 </div>
                 <div class="stat-info">
@@ -60,7 +46,7 @@
     {
         <div class="col-md-6">
             <div class="card stat-card">
-                <div class="stat-icon green">
+                <div class="stat-icon primary">
                     <span class="material-icons">waving_hand</span>
                 </div>
                 <div class="stat-info">
@@ -71,7 +57,7 @@
         </div>
         <div class="col-md-6">
             <div class="card stat-card">
-                <div class="stat-icon orange">
+                <div class="stat-icon primary">
                     <span class="material-icons">calendar_today</span>
                 </div>
                 <div class="stat-info">
@@ -83,53 +69,52 @@
     }
 </div>
 
-<!-- Applicazioni -->
-<h4 class="mb-3 fw-bold text-secondary">Le tue Applicazioni</h4>
-
+<!-- Aziende e Applicazioni -->
 @if (Model != null && Model.Any())
 {
-    <div class="row">
-        @foreach (var app in Model)
-        {
-            <div class="col-md-4 mb-4">
-                @if (app.Url.StartsWith("/"))
+    foreach (var company in Model)
+    {
+        <div class="card mb-4">
+            <div class="card-header" style="background-color: @company.PrimaryColor; color: @company.SecondaryColor;">
+                <h4 class="mb-0">@company.Name</h4>
+            </div>
+            <div class="card-body">
+                @if (company.Applications != null && company.Applications.Any())
                 {
-                    <a href="@app.Url" class="card app-card">
-                        <div class="card-body text-center d-flex flex-column align-items-center h-100">
-                            <div class="app-icon-container">
-                                <span class="material-icons">@app.Icon</span>
+                    <div class="row">
+                        @foreach (var app in company.Applications)
+                        {
+                            <div class="col-md-4 mb-4">
+                                <a href="@app.Url" class="card app-card">
+                                    <div class="card-body text-center d-flex flex-column align-items-center h-100">
+                                        <div class="app-icon-container" style="background-color: @(company.PrimaryColor + "1A"); color: @company.PrimaryColor;">
+                                            <span class="material-icons">@app.Icon</span>
+                                        </div>
+                                        <h5 class="app-title">@app.Name</h5>
+                                        <p class="app-desc">@app.Description</p>
+                                        <span class="btn btn-sm mt-auto w-100" style="border-color: @company.PrimaryColor; color: @company.PrimaryColor;">Apri</span>
+                                    </div>
+                                </a>
                             </div>
-                            <h5 class="app-title">@app.Name</h5>
-                            <p class="app-desc">@app.Description</p>
-                            <span class="btn btn-outline-secondary btn-sm mt-auto w-100">Apri</span>
-                        </div>
-                    </a>
+                        }
+                    </div>
                 }
                 else
                 {
-                    <a asp-controller="Apps" asp-action="View" asp-route-appId="@app.AppId" class="card app-card">
-                        <div class="card-body text-center d-flex flex-column align-items-center h-100">
-                            <div class="app-icon-container">
-                                <span class="material-icons">@app.Icon</span>
-                            </div>
-                            <h5 class="app-title">@app.Name</h5>
-                            <p class="app-desc">@app.Description</p>
-                            <span class="btn btn-outline-secondary btn-sm mt-auto w-100">Apri</span>
-                        </div>
-                    </a>
+                    <p class="text-muted">Nessuna applicazione disponibile per questa azienda.</p>
                 }
             </div>
-        }
-    </div>
+        </div>
+    }
 }
 else
 {
     <div class="card p-5 text-center">
         <div class="mb-3 text-muted">
-            <span class="material-icons" style="font-size: 48px;">inbox</span>
+            <span class="material-icons" style="font-size: 48px;">business</span>
         </div>
-        <h5>Nessuna applicazione disponibile</h5>
-        <p class="text-muted">Non hai accesso a nessuna applicazione al momento.</p>
+        <h5>Nessuna azienda configurata</h5>
+        <p class="text-muted">Non sono state ancora configurate aziende nella piattaforma.</p>
     </div>
 }
 

@@ -1,13 +1,15 @@
+using Microsoft.AspNetCore.Authorization; // Aggiunto
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Platform.Portal.Data;
 using Microsoft.FeatureManagement;
+using Platform.Portal.Authorization; // Aggiunto
 using Platform.Portal.Middleware;
 using Platform.Portal.Models;
 using Platform.Portal.Services;
-using Platform.Portal.Settings; // Aggiunto using per Settings
+using Platform.Portal.Settings;
 using Platform.Shared.Services;
-using Platform.Portal.Hubs; // Aggiunto using per Hubs
+using Platform.Portal.Hubs;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -27,7 +29,7 @@ builder.Host.UseSerilog();
 
 // Aggiungi servizi al container
 builder.Services.AddControllersWithViews();
-builder.Services.AddSignalR(); // Aggiunto SignalR
+builder.Services.AddSignalR();
 builder.Services.AddFeatureManagement();
 
 // Configura DbContext (SQLite)
@@ -44,11 +46,22 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 
 // Registra i servizi
 builder.Services.AddScoped<IPermissionService, PermissionService>();
-builder.Services.AddScoped<IEmailService, EmailService>(); // Registra il servizio email
-builder.Services.AddScoped<IKioskService, KioskService>(); // Registra il servizio Kiosk
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IKioskService, KioskService>();
+
+// Registra l'handler di autorizzazione
+builder.Services.AddSingleton<IAuthorizationHandler, PermissionHandler>();
+
+// Configura le policy di autorizzazione
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("Kiosk.Create", policy => policy.Requirements.Add(new PermissionRequirement("ConfigurationKiosk.Create")));
+    options.AddPolicy("Kiosk.Edit", policy => policy.Requirements.Add(new PermissionRequirement("ConfigurationKiosk.Edit")));
+    options.AddPolicy("Kiosk.Delete", policy => policy.Requirements.Add(new PermissionRequirement("ConfigurationKiosk.Delete")));
+});
 
 // Configura le impostazioni
-builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings")); // Registra le impostazioni email
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 
 // Configura cookie authentication
 builder.Services.ConfigureApplicationCookie(options =>
@@ -113,7 +126,7 @@ app.UseAuthorization();
 app.UsePermissionMiddleware();
 app.UseSerilogRequestLogging();
 
-app.MapHub<KioskHub>("/kioskhub"); // Mappa l'hub
+app.MapHub<KioskHub>("/kioskhub");
 
 app.MapControllerRoute(
     name: "default",
