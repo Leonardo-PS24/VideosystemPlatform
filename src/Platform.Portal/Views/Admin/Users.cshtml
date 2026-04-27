@@ -4,12 +4,13 @@
     ViewData["Title"] = "Gestione Utenti";
 }
 
-@section HeaderActions {
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="page-title">@ViewData["Title"]</h1>
     <a asp-action="CreateUser" class="btn btn-primary">
         <span class="material-icons">add</span>
         Nuovo Utente
     </a>
-}
+</div>
 
 <div class="card">
     <div class="card-body p-0">

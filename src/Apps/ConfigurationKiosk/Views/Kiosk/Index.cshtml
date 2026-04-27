@@ -204,11 +204,11 @@
                             <td class="ps-4">
                                 @if (item.Status == "Completed")
                                 {
-                                    <span class="badge bg-success"><i class="material-icons align-middle" style="font-size: 12px;">check</i> <span class="d-none d-md-inline">Completato</span></span>
+                                    <span class="badge bg-success"><i class="material-icons align-middle" style="font-size: 12px;">check</i> <span class="d-none d-lg-inline">Completato</span></span>
                                 }
                                 else
                                 {
-                                    <span class="badge bg-warning text-dark"><i class="material-icons align-middle" style="font-size: 12px;">hourglass_empty</i> <span class="d-none d-md-inline">In Corso</span></span>
+                                    <span class="badge bg-warning text-dark"><i class="material-icons align-middle" style="font-size: 12px;">hourglass_empty</i> <span class="d-none d-lg-inline">In Corso</span></span>
                                 }
                             </td>
                             <td class="fw-bold">@item.MachineSerialNumber</td>
@@ -219,7 +219,7 @@
                                     <div class="bg-light rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px; font-size: 10px; font-weight: bold; color: var(--pharmaself-primary);">
                                         @item.CreatedBy.Substring(0, 1).ToUpper()
                                     </div>
-                                    <span class="small">@item.CreatedBy</span>
+                                    <span class="small">@(item.CreatedBy.Contains('@') ? item.CreatedBy.Split('@')[0] : item.CreatedBy)</span>
                                 </div>
                             </td>
                             <td class="text-center">
@@ -305,7 +305,7 @@
                 const row = $(`tr[data-instance-id="${instanceId}"]`);
                 if (row.length) {
                     updateProgressRing(row.find('.progress-ring')[0], 100);
-                    row.find('.badge').removeClass('bg-warning text-dark').addClass('bg-success').html('<i class="material-icons align-middle" style="font-size: 12px;">check</i> Completato');
+                    row.find('.badge').removeClass('bg-warning text-dark').addClass('bg-success').html('<i class="material-icons align-middle" style="font-size: 12px;">check</i> <span class="d-none d-lg-inline">Completato</span>');
                 }
             });
 

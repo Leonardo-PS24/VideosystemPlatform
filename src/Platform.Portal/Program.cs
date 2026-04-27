@@ -32,9 +32,9 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddSignalR();
 builder.Services.AddFeatureManagement();
 
-// Configura DbContext (SQLite)
+// Configura DbContext (SQL Server)
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Configura Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
@@ -97,8 +97,8 @@ using (var scope = app.Services.CreateScope())
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
         
         Log.Information("Verifica e inizializzazione database...");
-        await context.Database.EnsureCreatedAsync();
-        Log.Information("Database pronto");
+        // In produzione, le migrazioni dovrebbero essere applicate manualmente o con uno script di deploy.
+        // await context.Database.EnsureCreatedAsync(); // Questo può essere rischioso in produzione.
         
         await DbInitializer.Initialize(context, userManager, roleManager);
         Log.Information("Inizializzazione dati completata");
@@ -116,8 +116,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-// Commentato per facilitare test in LAN senza certificati validi
-// app.UseHttpsRedirection(); 
+app.UseHttpsRedirection();
 
 app.UseStaticFiles();
 app.UseRouting();

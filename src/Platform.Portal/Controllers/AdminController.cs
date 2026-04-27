@@ -2,9 +2,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Platform.Portal.Data; // Aggiunto per accedere al DbContext
 using Platform.Portal.Models;
 using Platform.Portal.Models.ViewModels;
-using Platform.Portal.Services; // Aggiunto using per i servizi
+using Platform.Portal.Services;
 using Platform.Shared.Constants;
 
 namespace Platform.Portal.Controllers;
@@ -16,47 +17,56 @@ namespace Platform.Portal.Controllers;
 public class AdminController : Controller
 {
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IEmailService _emailService; // Aggiunto servizio email
+    private readonly RoleManager<IdentityRole> _roleManager; // Aggiunto RoleManager
+    private readonly ApplicationDbContext _context; // Aggiunto DbContext
+    private readonly IEmailService _emailService;
     private readonly ILogger<AdminController> _logger;
 
     public AdminController(
         UserManager<ApplicationUser> userManager,
-        IEmailService emailService, // Iniezione del servizio
+        RoleManager<IdentityRole> roleManager, // Iniezione
+        ApplicationDbContext context, // Iniezione
+        IEmailService emailService,
         ILogger<AdminController> logger)
     {
         _userManager = userManager;
+        _roleManager = roleManager;
+        _context = context;
         _emailService = emailService;
         _logger = logger;
     }
 
-    // ... (metodi Users, EditUser, etc. non modificati) ...
+    /// <summary>
+    /// Mostra la lista di tutti gli utenti in modo ottimizzato
+    /// </summary>
     public async Task<IActionResult> Users()
     {
-        var users = await _userManager.Users.ToListAsync();
-        var userList = new List<UserListViewModel>();
-
-        foreach (var user in users)
-        {
-            var roles = await _userManager.GetRolesAsync(user);
-            userList.Add(new UserListViewModel
+        // Query ottimizzata per evitare il problema N+1
+        var userList = await (from user in _context.Users
+            join userRole in _context.UserRoles on user.Id equals userRole.UserId into ur
+            from subUserRole in ur.DefaultIfEmpty()
+            join role in _context.Roles on subUserRole.RoleId equals role.Id into r
+            from subRole in r.DefaultIfEmpty()
+            select new UserListViewModel
             {
                 Id = user.Id,
                 Username = user.UserName!,
                 Email = user.Email!,
                 FullName = user.FullName,
                 IsActive = user.IsActive,
-                Role = roles.FirstOrDefault() ?? "User",
+                Role = subRole.Name ?? "Nessun Ruolo",
                 CreatedAt = user.CreatedAt
-            });
-        }
+            }).ToListAsync();
 
         return View(userList);
     }
+    
     [HttpGet]
     public IActionResult CreateUser()
     {
         return View(new UserViewModel());
     }
+    
     public async Task<IActionResult> EditUser(string id)
     {
         var user = await _userManager.FindByIdAsync(id);
@@ -81,6 +91,7 @@ public class AdminController : Controller
 
         return View(model);
     }
+    
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> EditUser(UserViewModel model)
@@ -143,6 +154,7 @@ public class AdminController : Controller
 
         return View(model);
     }
+    
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteUser(string id)
@@ -174,6 +186,7 @@ public class AdminController : Controller
 
         return RedirectToAction(nameof(Users));
     }
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ToggleUserStatus(string id)
