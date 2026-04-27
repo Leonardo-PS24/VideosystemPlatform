@@ -17,6 +17,11 @@ public static class DbInitializer
         UserManager<ApplicationUser> userManager,
         RoleManager<IdentityRole> roleManager)
     {
+        // In un ambiente di produzione, la creazione automatica di utenti
+        // e ruoli di test dovrebbe essere disabilitata.
+        // Lo schema del database viene gestito interamente tramite le migrazioni.
+        
+        /*
         // Applica le migrazioni pending
         await context.Database.EnsureCreatedAsync();
 
@@ -78,5 +83,8 @@ public static class DbInitializer
                 await userManager.AddToRoleAsync(testUser, PlatformConstants.Roles.User);
             }
         }
+        */
+        
+        await Task.CompletedTask;
     }
 }

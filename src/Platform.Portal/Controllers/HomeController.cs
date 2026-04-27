@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Platform.Portal.Models; // Aggiunto per i nuovi modelli
 
 namespace Platform.Portal.Controllers;
 
@@ -19,26 +20,18 @@ public class HomeController : Controller
     }
 
     /// <summary>
-    /// Dashboard principale con lista delle applicazioni disponibili
+    /// Dashboard principale con lista delle aziende e le loro applicazioni disponibili
     /// </summary>
     public IActionResult Index()
     {
-        var applications = _configuration.GetSection("Applications").Get<List<ApplicationInfo>>() 
-            ?? new List<ApplicationInfo>();
+        var companies = _configuration.GetSection("Companies").Get<List<CompanyInfo>>() 
+            ?? new List<CompanyInfo>();
         
-        // Filtra le applicazioni in base al ruolo dell'utente
-        var userRoles = User.Claims
-            .Where(c => c.Type == System.Security.Claims.ClaimTypes.Role)
-            .Select(c => c.Value)
-            .ToList();
+        // Qui potresti voler filtrare le aziende in base ai ruoli dell'utente,
+        // ma per ora mostriamo tutte le aziende e le loro app.
+        // La logica di filtro per le app sarà gestita a livello di singola app o in una vista dedicata.
 
-        var filteredApps = applications.Where(app => 
-            string.IsNullOrEmpty(app.RequiredRole) || 
-            userRoles.Contains(app.RequiredRole) ||
-            userRoles.Contains("Admin"))
-            .ToList();
-
-        return View(filteredApps);
+        return View(companies);
     }
 
     /// <summary>
@@ -49,17 +42,4 @@ public class HomeController : Controller
     {
         return View();
     }
-}
-
-/// <summary>
-/// Informazioni su un'applicazione della piattaforma
-/// </summary>
-public class ApplicationInfo
-{
-    public string Name { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
-    public string Url { get; set; } = string.Empty;
-    public string AppId { get; set; } = string.Empty;
-    public string Icon { get; set; } = "apps";
-    public string RequiredRole { get; set; } = string.Empty;
 }

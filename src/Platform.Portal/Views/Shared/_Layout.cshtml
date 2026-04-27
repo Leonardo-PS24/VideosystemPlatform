@@ -5,6 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Videosystem Platform</title>
     
+    <!-- Favicon -->
+    <link rel="icon" href="~/images/icons/icon-72x72.ico" type="image/x-icon" />
+    
+    <!-- PWA & Mobile App -->
+    <link rel="manifest" href="~/manifest.json" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="VS Platform" />
+    <link rel="apple-touch-icon" href="/images/icons/icon-192x192.png" />
+    <meta name="theme-color" content="#0096D7" />
+
     <!-- Fonts & Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -20,20 +32,13 @@
 @if (User.Identity?.IsAuthenticated == true)
 {
     <div class="wrapper">
-        <!-- Sidebar Overlay (Mobile) -->
-        <div class="sidebar-overlay" id="sidebarOverlay"></div>
-
         <!-- Sidebar -->
         <nav class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="logo-container">
-                    <span class="material-icons logo-icon">layers</span>
+                    <img src="~/images/logo-azienda.png" alt="Logo Aziendale" class="sidebar-logo" />
                     <span class="logo-text">Videosystem</span>
                 </div>
-                <!-- Close button for mobile -->
-                <button class="btn btn-link text-white d-lg-none ms-auto p-0" id="sidebarClose">
-                    <span class="material-icons">close</span>
-                </button>
             </div>
 
             <div class="sidebar-menu">
@@ -47,7 +52,7 @@
                 @if (User.IsInRole("Admin"))
                 {
                     <div class="nav-item mt-4 mb-2">
-                        <small class="text-uppercase text-white-50 px-3 nav-text" style="font-size: 0.7rem; font-weight: 700;">Amministrazione</small>
+                        <small class="text-uppercase text-muted px-3 nav-text" style="font-size: 0.7rem; font-weight: 700;">Amministrazione</small>
                     </div>
                     <div class="nav-item">
                         <a asp-controller="Admin" asp-action="Users" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Admin" ? "active" : "")" title="Gestione Utenti">
@@ -65,21 +70,9 @@
             </div>
 
             <div class="sidebar-footer">
-                <div class="user-profile">
-                    <div class="user-avatar">
-                        @User.Identity.Name?.Substring(0, 1).ToUpper()
-                    </div>
-                    <div class="user-info">
-                        <span class="user-name">@User.Identity.Name</span>
-                        <span class="user-role">@(User.IsInRole("Admin") ? "Amministratore" : "Utente")</span>
-                    </div>
-                </div>
-                <form asp-controller="Account" asp-action="Logout" method="post">
-                    <button type="submit" class="btn-logout" title="Esci">
-                        <span class="material-icons">logout</span>
-                        <span class="logout-text">Esci</span>
-                    </button>
-                </form>
+                <button class="toggle-btn" id="sidebarToggle">
+                    <span class="material-icons">arrow_back_ios</span>
+                </button>
             </div>
         </nav>
 
@@ -87,14 +80,45 @@
         <div class="main-content">
             <!-- Top Header -->
             <header class="top-header">
-                <div class="header-left">
-                    <button class="toggle-btn" id="sidebarToggle">
-                        <span class="material-icons">menu</span>
-                    </button>
-                    <h1 class="page-title">@ViewData["Title"]</h1>
+                <div class="header-center">
+                    <!-- Search Bar Placeholder -->
+                    <div class="search-bar">
+                        <span class="material-icons">search</span>
+                        <input type="text" placeholder="Cerca...">
+                    </div>
                 </div>
+
                 <div class="header-right">
-                    @RenderSection("HeaderActions", required: false)
+                    <!-- Notifications Placeholder -->
+                    <div class="header-icon">
+                        <span class="material-icons">notifications</span>
+                    </div>
+
+                    <!-- User Profile -->
+                    <div class="user-profile-container" id="userProfileMenu">
+                        <div class="user-profile-trigger">
+                            <div class="user-avatar">
+                                @User.Identity.Name?.Substring(0, 1).ToUpper()
+                            </div>
+                            <span class="user-name">@User.Identity.Name</span>
+                        </div>
+                        
+                        <!-- Profile Dropdown -->
+                        <div class="dropdown-menu" id="profileDropdown">
+                            <div class="dropdown-header">
+                                <h6>@User.Identity.Name</h6>
+                                <p class="text-muted small">@(User.IsInRole("Admin") ? "Amministratore" : "Utente")</p>
+                            </div>
+                            <a href="#" class="dropdown-item">Il Mio Profilo</a>
+                            <div class="dropdown-divider"></div>
+                            <form asp-controller="Account" asp-action="Logout" method="post" class="dropdown-item-form">
+                                <button type="submit" class="btn-logout">
+                                    <span class="material-icons">logout</span>
+                                    Esci
+                                </button>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </header>
 
@@ -146,24 +170,16 @@ else
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const sidebarToggle = document.getElementById('sidebarToggle');
-        const sidebarClose = document.getElementById('sidebarClose');
-        const sidebarOverlay = document.getElementById('sidebarOverlay');
         const body = document.body;
         
-        // Funzione per gestire il toggle
         function toggleSidebar() {
-            if (window.innerWidth >= 992) {
-                // Desktop: Collapse
-                body.classList.toggle('sidebar-collapsed');
-                localStorage.setItem('sidebar-collapsed', body.classList.contains('sidebar-collapsed'));
-            } else {
-                // Mobile: Open/Close Overlay
-                body.classList.toggle('sidebar-open');
-            }
+            body.classList.toggle('sidebar-collapsed');
+            localStorage.setItem('sidebar-collapsed', body.classList.contains('sidebar-collapsed'));
         }
 
-        // Ripristina stato salvato (solo desktop)
-        if (window.innerWidth >= 992) {
+        if (window.innerWidth < 992) {
+            body.classList.add('sidebar-collapsed');
+        } else {
             const isCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
             if (isCollapsed) {
                 body.classList.add('sidebar-collapsed');
@@ -174,27 +190,35 @@ else
             sidebarToggle.addEventListener('click', toggleSidebar);
         }
 
-        if (sidebarClose) {
-            sidebarClose.addEventListener('click', function() {
-                body.classList.remove('sidebar-open');
+        // User Profile Dropdown
+        const userProfileMenu = document.getElementById('userProfileMenu');
+        const profileDropdown = document.getElementById('profileDropdown');
+
+        if (userProfileMenu) {
+            userProfileMenu.addEventListener('click', function(event) {
+                profileDropdown.classList.toggle('show');
+                event.stopPropagation();
+            });
+
+            document.addEventListener('click', function(event) {
+                if (!userProfileMenu.contains(event.target)) {
+                    profileDropdown.classList.remove('show');
+                }
             });
         }
 
-        if (sidebarOverlay) {
-            sidebarOverlay.addEventListener('click', function() {
-                body.classList.remove('sidebar-open');
+        // Registrazione Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(registration => {
+                        console.log('Service Worker registrato con successo:', registration);
+                    })
+                    .catch(error => {
+                        console.log('Errore nella registrazione del Service Worker:', error);
+                    });
             });
         }
-        
-        // Chiudi sidebar mobile al click su un link
-        const navLinks = document.querySelectorAll('.sidebar .nav-link');
-        navLinks.forEach(link => {
-            link.addEventListener('click', function() {
-                if (window.innerWidth < 992) {
-                    body.classList.remove('sidebar-open');
-                }
-            });
-        });
     });
 </script>
 @await RenderSectionAsync("Scripts", required: false)

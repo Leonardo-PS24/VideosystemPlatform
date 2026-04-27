@@ -1,75 +1,70 @@
 @model Platform.Portal.Models.ViewModels.PermissionMatrixViewModel
 @{
     ViewData["Title"] = "Gestione Permessi";
-    ViewData["Subtitle"] = "Configura i permessi di accesso alle applicazioni per ogni utente";
 }
 
-<!-- Statistiche -->
-<div class="row g-4 mb-4">
-    <div class="col-md-3">
-        <div class="stat-card">
-            <div class="stat-icon blue">
-                <span class="material-icons">people</span>
-            </div>
-            <div class="stat-value">@Model.Users.Count()</div>
-            <div class="stat-label">Utenti Totali</div>
-        </div>
-    </div>
+<style>
+    .permission-btn {
+        border-radius: 50%;
+        width: 36px;
+        height: 36px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        transition: all 0.2s ease-in-out;
+        color: var(--text-secondary);
+        background-color: var(--bs-gray-200);
+    }
 
-    <div class="col-md-3">
-        <div class="stat-card">
-            <div class="stat-icon green">
-                <span class="material-icons">apps</span>
-            </div>
-            <div class="stat-value">@Model.Applications.Count()</div>
-            <div class="stat-label">Applicazioni</div>
-        </div>
-    </div>
+    .permission-btn:hover {
+        transform: scale(1.1);
+        box-shadow: var(--shadow-sm);
+    }
 
-    <div class="col-md-3">
-        <div class="stat-card">
-            <div class="stat-icon orange">
-                <span class="material-icons">verified_user</span>
-            </div>
-            <div class="stat-value">@Model.Users.Count(u => u.Permissions != null && u.Permissions.Count > 0)</div>
-            <div class="stat-label">Utenti con Permessi</div>
-        </div>
-    </div>
+    /* Colori per tipo di permesso */
+    .permission-btn.view { background-color: var(--bs-success-bg-subtle); color: var(--bs-success-text-emphasis); }
+    .permission-btn.create { background-color: var(--bs-primary-bg-subtle); color: var(--bs-primary-text-emphasis); }
+    .permission-btn.edit { background-color: var(--bs-warning-bg-subtle); color: var(--bs-warning-text-emphasis); }
+    .permission-btn.delete { background-color: var(--bs-danger-bg-subtle); color: var(--bs-danger-text-emphasis); }
 
-    <div class="col-md-3">
-        <div class="stat-card">
-            <div class="stat-icon red">
-                <span class="material-icons">admin_panel_settings</span>
-            </div>
-            <div class="stat-value">@Model.Users.Count(u => u.Role == "Admin")</div>
-            <div class="stat-label">Amministratori</div>
-        </div>
-    </div>
-</div>
+    /* Stato Attivo */
+    .permission-btn.active.view { background-color: var(--bs-success); color: white; }
+    .permission-btn.active.create { background-color: var(--bs-primary); color: white; }
+    .permission-btn.active.edit { background-color: var(--bs-warning); color: white; }
+    .permission-btn.active.delete { background-color: var(--bs-danger); color: white; }
+
+    .user-avatar-table {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: var(--vs-primary-bg);
+        color: var(--vs-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 1rem;
+    }
+</style>
 
 <!-- Filtri -->
-<div class="filters-card">
-    <form method="get" class="row g-3">
-        <div class="col-md-5">
-            <div class="filter-group">
-                <label for="roleFilter" class="form-label">
-                    <span class="material-icons align-middle" style="font-size: 16px;">filter_alt</span>
-                    Filtra per Ruolo
-                </label>
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><span class="material-icons align-middle me-1">filter_alt</span> Filtri di Ricerca</h5>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-5">
+                <label for="roleFilter" class="form-label">Filtra per Ruolo</label>
                 <select name="roleFilter" id="roleFilter" class="form-select" onchange="this.form.submit()">
                     <option value="">Tutti i ruoli</option>
                     <option value="Admin" selected="@(Model.RoleFilter == "Admin")">Admin</option>
                     <option value="User" selected="@(Model.RoleFilter == "User")">User</option>
                 </select>
             </div>
-        </div>
-
-        <div class="col-md-5">
-            <div class="filter-group">
-                <label for="applicationFilter" class="form-label">
-                    <span class="material-icons align-middle" style="font-size: 16px;">apps</span>
-                    Filtra per Applicazione
-                </label>
+            <div class="col-md-5">
+                <label for="applicationFilter" class="form-label">Filtra per Applicazione</label>
                 <select name="applicationFilter" id="applicationFilter" class="form-select" onchange="this.form.submit()">
                     <option value="">Tutte le applicazioni</option>
                     @foreach (var app in Model.Applications)
@@ -80,39 +75,38 @@
                     }
                 </select>
             </div>
-        </div>
-
-        @if (!string.IsNullOrEmpty(Model.RoleFilter) || !string.IsNullOrEmpty(Model.ApplicationFilter))
-        {
-            <div class="col-md-2 d-flex align-items-end">
-                <a href="@Url.Action("Index")" class="btn btn-outline-secondary w-100">
-                    <span class="material-icons align-middle">clear</span>
-                    Rimuovi Filtri
-                </a>
-            </div>
-        }
-    </form>
+            @if (!string.IsNullOrEmpty(Model.RoleFilter) || !string.IsNullOrEmpty(Model.ApplicationFilter))
+            {
+                <div class="col-md-2">
+                    <a href="@Url.Action("Index")" class="btn btn-outline-secondary w-100">
+                        <span class="material-icons align-middle">clear</span>
+                        Rimuovi
+                    </a>
+                </div>
+            }
+        </form>
+    </div>
 </div>
 
 <!-- Matrice Permessi -->
-<div class="table-card">
-    <div class="table-card-body">
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><span class="material-icons align-middle me-1">grid_on</span> Matrice dei Permessi</h5>
+    </div>
+    <div class="card-body p-0">
         @if (Model.Users.Any())
         {
             <div class="table-responsive">
-                <table class="table" id="permissionsTable">
+                <table class="table table-hover mb-0" id="permissionsTable">
                     <thead>
                         <tr>
-                            <th style="min-width: 200px;">
-                                <span class="material-icons align-middle" style="font-size: 16px;">person</span>
-                                Utente
-                            </th>
+                            <th style="min-width: 250px;">Utente</th>
                             @foreach (var app in Model.Applications)
                             {
-                                <th class="text-center" style="min-width: 160px;">
+                                <th class="text-center" style="min-width: 200px;">
                                     <div class="d-flex flex-column align-items-center gap-1">
-                                        <span class="material-icons">@Platform.Portal.Models.ApplicationName.GetIcon(app)</span>
-                                        <small>@Platform.Portal.Models.ApplicationName.GetDisplayName(app)</small>
+                                        <span class="material-icons text-secondary">@Platform.Portal.Models.ApplicationName.GetIcon(app)</span>
+                                        <small class="fw-bold">@Platform.Portal.Models.ApplicationName.GetDisplayName(app)</small>
                                     </div>
                                 </th>
                             }
@@ -123,7 +117,6 @@
                         @foreach (var user in Model.Users)
                         {
                             var userId = user.UserId;
-                            var username = user.Username;
                             var fullName = user.FullName;
                             var role = user.Role;
                             var isActive = user.IsActive;
@@ -131,15 +124,15 @@
 
                             <tr class="@(isActive ? "" : "opacity-50")">
                                 <td>
-                                    <div class="d-flex align-items-center gap-2">
+                                    <div class="d-flex align-items-center gap-3">
                                         <div class="user-avatar-table">
                                             @fullName?.Substring(0, 1).ToUpper()
                                         </div>
                                         <div>
-                                            <div class="fw-semibold">@fullName</div>
-                                            <small class="text-muted">@@@username</small>
+                                            <div class="fw-bold">@fullName</div>
+                                            <small class="text-muted">@@@user.Username</small>
                                             <div class="mt-1">
-                                                <span class="badge @(role == "Admin" ? "bg-danger" : "bg-primary")">
+                                                <span class="badge @(role == "Admin" ? "bg-danger" : "bg-primary") rounded-pill">
                                                     @role
                                                 </span>
                                             </div>
@@ -155,34 +148,25 @@
                                     var canDelete = appPerms?.CanDelete ?? false;
 
                                     <td class="text-center">
-                                        <div class="d-flex justify-content-center gap-1 flex-wrap">
-                                            <button class="permission-btn @(canView ? "active view" : "")"
-                                                    title="View"
-                                                    onclick="togglePermission('@userId', '@app', 'view', this)">
-                                                <span class="material-icons">visibility</span>
+                                        <div class="d-flex justify-content-center gap-2 flex-wrap">
+                                            <button class="permission-btn view @(canView ? "active" : "")" title="Visualizzazione" onclick="togglePermission('@userId', '@app', 'view', this)">
+                                                <span class="material-icons" style="font-size: 20px;">visibility</span>
                                             </button>
-                                            <button class="permission-btn @(canCreate ? "active create" : "")"
-                                                    title="Create"
-                                                    onclick="togglePermission('@userId', '@app', 'create', this)">
-                                                <span class="material-icons">add_circle</span>
+                                            <button class="permission-btn create @(canCreate ? "active" : "")" title="Creazione" onclick="togglePermission('@userId', '@app', 'create', this)">
+                                                <span class="material-icons" style="font-size: 20px;">add_circle</span>
                                             </button>
-                                            <button class="permission-btn @(canEdit ? "active edit" : "")"
-                                                    title="Edit"
-                                                    onclick="togglePermission('@userId', '@app', 'edit', this)">
-                                                <span class="material-icons">edit</span>
+                                            <button class="permission-btn edit @(canEdit ? "active" : "")" title="Modifica" onclick="togglePermission('@userId', '@app', 'edit', this)">
+                                                <span class="material-icons" style="font-size: 20px;">edit</span>
                                             </button>
-                                            <button class="permission-btn @(canDelete ? "active delete" : "")"
-                                                    title="Delete"
-                                                    onclick="togglePermission('@userId', '@app', 'delete', this)">
-                                                <span class="material-icons">delete</span>
+                                            <button class="permission-btn delete @(canDelete ? "active" : "")" title="Eliminazione" onclick="togglePermission('@userId', '@app', 'delete', this)">
+                                                <span class="material-icons" style="font-size: 20px;">delete</span>
                                             </button>
                                         </div>
                                     </td>
                                 }
                                 <td class="text-center">
-                                    <a href="@Url.Action("EditUser", new { userId })"
-                                       class="btn btn-sm btn-outline-primary">
-                                        <span class="material-icons" style="font-size: 16px;">edit</span>
+                                    <a href="@Url.Action("EditUser", new { userId })" class="btn btn-sm btn-outline-primary" title="Modifica Dettagliata">
+                                        <span class="material-icons" style="font-size: 18px;">edit_note</span>
                                     </a>
                                 </td>
                             </tr>
@@ -193,12 +177,12 @@
         }
         else
         {
-            <div class="empty-state">
-                <div class="empty-state-icon">
-                    <span class="material-icons">search_off</span>
+            <div class="text-center p-5">
+                <div class="mb-3 text-muted">
+                    <span class="material-icons" style="font-size: 48px;">search_off</span>
                 </div>
-                <h3 class="empty-state-title">Nessun utente trovato</h3>
-                <p class="empty-state-description">Prova a modificare i filtri di ricerca</p>
+                <h5>Nessun utente trovato</h5>
+                <p class="text-muted">Prova a modificare i filtri di ricerca o a rimuoverli.</p>
             </div>
         }
     </div>
@@ -228,38 +212,20 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    // Toggle classe active
-                    if (result.newValue) {
-                        button.classList.add('active');
-                    } else {
-                        button.classList.remove('active');
-                    }
-
+                    button.classList.toggle('active', result.newValue);
+                    
                     // Animazione
                     button.style.transform = 'scale(1.15)';
                     setTimeout(() => {
                         button.style.transform = '';
                     }, 200);
                 } else {
-                    alert(result.message || 'Errore nell\'operazione');
+                    alert(result.message || 'Errore durante l\'aggiornamento del permesso.');
                 }
             } catch (error) {
-                console.error('Error:', error);
-                alert('Errore di comunicazione con il server');
+                console.error('Errore:', error);
+                alert('Errore di comunicazione con il server.');
             }
         }
-
-        // Animazione righe al caricamento
-        const rows = document.querySelectorAll('#permissionsTable tbody tr');
-        rows.forEach((row, index) => {
-            row.style.opacity = '0';
-            row.style.transform = 'translateX(-20px)';
-
-            setTimeout(() => {
-                row.style.transition = 'all 0.4s ease-out';
-                row.style.opacity = '1';
-                row.style.transform = 'translateX(0)';
-            }, index * 50);
-        });
     </script>
 }

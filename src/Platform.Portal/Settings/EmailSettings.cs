@@ -1,8 +1,5 @@
 ﻿namespace Platform.Portal.Settings;
 
-/// <summary>
-/// Impostazioni per il servizio di invio email (SMTP)
-/// </summary>
 public class EmailSettings
 {
     public string SmtpServer { get; set; } = string.Empty;

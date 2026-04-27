@@ -6,8 +6,8 @@
 }
 
 <div class="text-center mb-4">
-    <div class="d-inline-flex align-items-center justify-content-center bg-vs-green text-white rounded-circle mb-3" style="width: 64px; height: 64px;">
-        <span class="material-icons" style="font-size: 32px;">layers</span>
+    <div class="d-inline-flex align-items-center justify-content-center  text-white rounded-circle mb-3" style="width: 64px; height: 64px;">
+       <img src="~/images/logo-azienda.png" alt="Logo Videosystem" style=" height: 100%"/>
     </div>
     <h2 class="fw-bold text-primary">Videosystem</h2>
     <p class="text-secondary">Accedi alla piattaforma aziendale</p>
@@ -17,7 +17,7 @@
     <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-3" role="alert"></div>
 
     <div class="mb-3">
-        <label asp-for="Username" class="form-label fw-bold">Utente</label>
+        <label asp-for="Username" class="form-label fw-bold text-secondary">Utente</label>
         <div class="input-group">
             <span class="input-group-text bg-light border-end-0">
                 <span class="material-icons text-secondary" style="font-size: 20px;">person</span>
@@ -28,7 +28,7 @@
     </div>
 
     <div class="mb-4">
-        <label asp-for="Password" class="form-label fw-bold">Password</label>
+        <label asp-for="Password" class="form-label fw-bold text-secondary">Password</label>
         <div class="input-group">
             <span class="input-group-text bg-light border-end-0">
                 <span class="material-icons text-secondary" style="font-size: 20px;">lock</span>
@@ -43,7 +43,7 @@
             <input asp-for="RememberMe" class="form-check-input" />
             <label asp-for="RememberMe" class="form-check-label text-secondary">Ricordami</label>
         </div>
-        <a href="#" class="text-decoration-none small text-vs-green">Password dimenticata?</a>
+        <a href="#" class="text-decoration-none small text-primary">Password dimenticata?</a>
     </div>
 
     <div class="d-grid">

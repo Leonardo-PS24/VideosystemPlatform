@@ -1,21 +1,22 @@
 ﻿@model ConfigurationKiosk.Models.KioskCompileViewModel
+@using Microsoft.AspNetCore.Authorization
+@inject IAuthorizationService AuthorizationService
 
 @{
     ViewData["Title"] = "Compilazione Checklist";
     bool isCompleted = Model.Instance.Status == "Completed";
     bool isInRevision = Model.Instance.Status == "InRevision";
-    bool isAdmin = User.IsInRole("Admin");
     
-    // ReadOnly se è completato. Se è InRevision, è modificabile (solo da Admin tecnicamente, ma lo stato lo permette)
-    bool isReadOnly = isCompleted; 
+    // L'utente può modificare se ha il permesso "Kiosk.Edit" E la checklist non è bloccata
+    var canEdit = (await AuthorizationService.AuthorizeAsync(User, "Kiosk.Edit")).Succeeded;
+    bool isReadOnly = !canEdit || (isCompleted && !isInRevision);
 }
 
 <!-- Stili CSS Personalizzati -->
 <style>
-    /* ... (Stili invariati) ... */
     :root {
-        --primary-color: #00945E;
-        --primary-light: #e6f4ed;
+        --pharmaself-primary: #00955E;
+        --pharmaself-primary-bg: #E6F4F1;
         --text-color: #333;
         --border-color: #e0e0e0;
         --bg-color: #f8f9fa;
@@ -59,7 +60,7 @@
         margin: 0;
         font-size: 1.1rem;
         font-weight: 700;
-        color: var(--primary-color);
+        color: var(--pharmaself-primary);
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
@@ -90,9 +91,9 @@
         transition: border-color 0.2s, box-shadow 0.2s;
     }
     .form-control-custom:focus {
-        border-color: var(--primary-color);
+        border-color: var(--pharmaself-primary);
         outline: none;
-        box-shadow: 0 0 0 3px rgba(0, 148, 94, 0.1);
+        box-shadow: 0 0 0 3px rgba(0, 149, 94, 0.1);
     }
 
     /* Toggle Switch */
@@ -122,7 +123,7 @@
         left: 2px;
         height: calc(100% - 4px);
         width: 50%;
-        background-color: var(--primary-color);
+        background-color: var(--pharmaself-primary);
         border-radius: 18px;
         transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
         z-index: 1;
@@ -140,8 +141,8 @@
         position: relative;
     }
     .file-upload-wrapper:hover {
-        border-color: var(--primary-color);
-        background: var(--primary-light);
+        border-color: var(--pharmaself-primary);
+        background: var(--pharmaself-primary-bg);
     }
     .file-preview {
         max-width: 100%;
@@ -193,12 +194,12 @@
         background: white;
         cursor: pointer;
     }
-    .custom-checkbox-wrapper:hover { border-color: var(--primary-color); }
+    .custom-checkbox-wrapper:hover { border-color: var(--pharmaself-primary); }
     .custom-checkbox {
         width: 20px;
         height: 20px;
         margin-right: 10px;
-        accent-color: var(--primary-color);
+        accent-color: var(--pharmaself-primary);
         cursor: pointer;
     }
 
@@ -242,7 +243,7 @@
         gap: 5px;
         transition: color 0.3s;
     }
-    .save-status.saving { color: var(--primary-color); }
+    .save-status.saving { color: var(--pharmaself-primary); }
     .save-status.error { color: #dc3545; }
     .save-status.warning { color: #f59e0b; font-weight: bold; }
 </style>
@@ -264,7 +265,7 @@
         <div class="flex-grow-1">
             <div class="d-flex align-items-center gap-3">
                 <h2 class="mb-0 fw-bold text-dark">@Model.Template.Name</h2>
-                <span class="badge bg-primary fs-5 px-3 py-2 rounded-pill shadow-sm">
+                <span class="badge fs-5 px-3 py-2 rounded-pill shadow-sm" style="background-color: var(--pharmaself-primary); color: white;">
                     <span class="opacity-75 me-1 fw-normal">SN:</span> @Model.Instance.MachineSerialNumber
                 </span>
                 @if (Model.Instance.Revision > 0)
@@ -297,7 +298,7 @@
         </div>
         
         <div>
-            <a asp-action="History" asp-route-id="@Model.Instance.Id" class="btn btn-light text-primary border me-2">
+            <a asp-action="History" asp-route-id="@Model.Instance.Id" class="btn btn-light border me-2" style="color: var(--pharmaself-primary);">
                 <span class="material-icons align-middle me-1">history</span> Storico
             </a>
         </div>
@@ -308,7 +309,7 @@
         <div class="col-lg-9">
             <div id="checklist-container" class="@(isReadOnly ? "read-only-mode" : "")">
                 <div class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status"></div>
+                    <div class="spinner-border" style="color: var(--pharmaself-primary);" role="status"></div>
                     <p class="mt-2 text-muted">Caricamento checklist...</p>
                 </div>
             </div>
@@ -318,9 +319,9 @@
                 <div class="card-body d-flex justify-content-between align-items-center p-4">
                     <div class="d-flex align-items-center text-muted">
                         <span class="material-icons me-2">info</span>
-                        @if (isCompleted)
+                        @if (isReadOnly)
                         {
-                            <span id="status-text">Configurazione completata. @(isAdmin ? "Puoi avviare una revisione." : "Sola lettura.")</span>
+                            <span id="status-text">MODALITÀ SOLA LETTURA: Non hai i permessi per modificare.</span>
                         }
                         else if (isInRevision)
                         {
@@ -346,19 +347,19 @@
                             </ul>
                         </div>
 
-                        @if (!isCompleted && !isInRevision)
+                        @if (!isCompleted && !isInRevision && canEdit)
                         {
                             <button id="btnComplete" class="btn btn-success btn-lg px-4 d-flex align-items-center">
                                 <span class="material-icons me-2">check_circle</span> Termina Configurazione
                             </button>
                         }
-                        else if (isCompleted && isAdmin)
+                        else if (isCompleted && canEdit)
                         {
                             <button id="btnStartRevision" class="btn btn-info btn-lg px-4 d-flex align-items-center">
                                 <span class="material-icons me-2">edit_note</span> Nuova Revisione
                             </button>
                         }
-                        else if (isInRevision && isAdmin)
+                        else if (isInRevision && canEdit)
                         {
                             <button id="btnFinalizeRevision" class="btn btn-warning btn-lg px-4 d-flex align-items-center">
                                 <span class="material-icons me-2">save_as</span> Salva Revisione
@@ -488,9 +489,9 @@
         let saveTimeout;
         let totalFieldsCount = 0;
         const currentUserId = '@User.Identity.Name';
-        const isCompleted = @isCompleted.ToString().ToLower();
-        const isInRevision = @isInRevision.ToString().ToLower();
-        const isAdmin = @isAdmin.ToString().ToLower();
+        const isCompleted = @isCompleted.ToString().ToLower() === 'true';
+        const isInRevision = @isInRevision.ToString().ToLower() === 'true';
+        const canEdit = @canEdit.ToString().ToLower() === 'true';
 
         // --- Parsing Iniziale ---
         try {
@@ -528,14 +529,12 @@
         }
 
         function updateProgress() {
-            // Se è completata E NON è in revisione, forza 100%
             if (isCompleted && !isInRevision) {
                 $('#progress-bar').css('width', '100%');
                 $('#progress-text').text('100%');
                 return 100;
             }
 
-            // In revisione o in progress: calcola
             const filled = touchedFields.size;
             const percent = totalFieldsCount > 0 ? Math.round((filled / totalFieldsCount) * 100) : 0;
             const finalPercent = Math.min(percent, 100);
@@ -578,8 +577,6 @@
                     } else if (isAutoSave) {
                         const indicator = $('#save-status-indicator');
                         indicator.removeClass('saving').html('<span class="material-icons" style="font-size: 16px;">cloud_done</span> Tutte le modifiche salvate');
-                    } else {
-                        // Salvataggio manuale (se mai servisse)
                     }
                 },
                 error: function(xhr, status, error) {
@@ -601,7 +598,7 @@
                 contentType: 'application/json',
                 data: JSON.stringify({ instanceId: instanceId }),
                 success: function() {
-                    location.reload(); // Ricarica per attivare modalità InRevision
+                    location.reload();
                 },
                 error: function() { alert('Errore avvio revisione.'); }
             });
@@ -665,8 +662,7 @@
             const initialIdx = $opts.toArray().findIndex(el => $(el).data('val') == initialVal);
             if (initialIdx >= 0) updateToggleUI($wrapper, initialIdx);
             $opts.click(function() {
-                // In revisione o non completato è modificabile
-                if (isCompleted && !isInRevision) return; 
+                if (!canEdit || (isCompleted && !isInRevision)) return; 
                 
                 const idx = $(this).index() - 1;
                 const val = $(this).data('val');
@@ -691,7 +687,7 @@
             if (savedData) { const img = new Image(); img.onload = () => ctx.drawImage(img, 0, 0, canvas.offsetWidth, canvas.offsetHeight); img.src = savedData; }
             function getPos(e) { const rect = canvas.getBoundingClientRect(); const clientX = e.touches ? e.touches[0].clientX : e.clientX; const clientY = e.touches ? e.touches[0].clientY : e.clientY; return { x: clientX - rect.left, y: clientY - rect.top }; }
             function startDraw(e) { 
-                if (isCompleted && !isInRevision) return;
+                if (!canEdit || (isCompleted && !isInRevision)) return;
                 isDrawing = true; const pos = getPos(e); ctx.beginPath(); ctx.moveTo(pos.x, pos.y); 
             }
             function draw(e) { if (!isDrawing) return; const pos = getPos(e); ctx.lineTo(pos.x, pos.y); ctx.stroke(); e.preventDefault(); }
@@ -701,7 +697,7 @@
         }
         function saveSignature(id) { const canvas = document.getElementById(`sig-${id}`); if (canvas) $(`input[data-id="${id}"]`).val(canvas.toDataURL()); }
         window.clearSignature = function(id) { 
-            if (isCompleted && !isInRevision) return;
+            if (!canEdit || (isCompleted && !isInRevision)) return;
             const canvas = document.getElementById(`sig-${id}`); if (canvas) { canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height); $(`input[data-id="${id}"]`).val('').trigger('change'); } 
         };
         window.handleFileSelect = function(input, id) { 
@@ -802,56 +798,29 @@
                 updateProgress();
             }
 
-            // Gestione Revisione Admin
-            $('#btnStartRevision').click(function() {
-                startRevision(); // Chiama endpoint server e ricarica
-            });
+            $('#btnStartRevision').click(() => startRevision());
+            $('#btnFinalizeRevision').click(() => new bootstrap.Modal(document.getElementById('finalizeRevisionModal')).show());
+            $('#confirmFinalizeBtn').click(() => finalizeRevision());
 
-            $('#btnFinalizeRevision').click(function() {
-                const modal = new bootstrap.Modal(document.getElementById('finalizeRevisionModal'));
-                modal.show();
-            });
-
-            $('#confirmFinalizeBtn').click(function() {
-                finalizeRevision();
-            });
-
-            // SignalR Connection
-            const connection = new signalR.HubConnectionBuilder()
-                .withUrl("/kioskhub")
-                .build();
-
-            connection.on("DataUpdated", function (updatedByUserId) {
+            const connection = new signalR.HubConnectionBuilder().withUrl("/kioskhub").build();
+            connection.on("DataUpdated", (updatedByUserId) => {
                 if (updatedByUserId !== currentUserId) {
-                    const indicator = $('#save-status-indicator');
-                    indicator.addClass('warning').html('<span class="material-icons" style="font-size: 16px;">warning</span> Modifiche rilevate da un altro utente! Ricaricare la pagina.');
+                    $('#save-status-indicator').addClass('warning').html('<span class="material-icons" style="font-size: 16px;">warning</span> Modifiche da altro utente! Ricaricare.');
                 }
             });
+            connection.start().then(() => connection.invoke("JoinChecklistGroup", instanceId.toString())).catch(err => console.error(err.toString()));
 
-            connection.start().then(function () {
-                connection.invoke("JoinChecklistGroup", instanceId.toString());
-            }).catch(err => console.error(err.toString()));
-
-            // Termina Configurazione
-            $('#btnComplete').click(function() {
+            $('#btnComplete').click(() => {
                 if (checkCompletion()) {
-                    const modal = new bootstrap.Modal(document.getElementById('completeModal'));
-                    modal.show();
+                    new bootstrap.Modal(document.getElementById('completeModal')).show();
                 } else {
-                    const modal = new bootstrap.Modal(document.getElementById('validationModal'));
-                    modal.show();
+                    new bootstrap.Modal(document.getElementById('validationModal')).show();
                 }
             });
+            $('#confirmCompleteBtn').click(() => saveData('Completed', true));
 
-            $('#confirmCompleteBtn').click(function() {
-                saveData('Completed', true);
-            });
-
-            // Auto-save listener
             $(document).on('change input', '.checklist-field', function() {
-                // Salva se InProgress o InRevision
-                if (isCompleted && !isInRevision) return; 
-
+                if (!canEdit || (isCompleted && !isInRevision)) return;
                 const id = $(this).data('id');
                 if (id) {
                     touchedFields.add(id);

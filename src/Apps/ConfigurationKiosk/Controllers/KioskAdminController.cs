@@ -22,17 +22,18 @@ public class KioskAdminController : Controller
 
     public async Task<IActionResult> Index()
     {
-        // Ora usiamo GetAllTemplatesAsync per vedere anche quelli inattivi
         var templates = await _kioskService.GetAllTemplatesAsync();
         return View(templates);
     }
 
+    [Authorize(Policy = "Kiosk.Create")]
     public IActionResult Create()
     {
         return View(new KioskChecklistTemplate { IsActive = true });
     }
 
     [HttpPost]
+    [Authorize(Policy = "Kiosk.Create")]
     public async Task<IActionResult> Create(KioskChecklistTemplate template, IFormFile? jsonFile)
     {
         if (jsonFile != null)
@@ -75,6 +76,7 @@ public class KioskAdminController : Controller
     }
     
     [HttpPost]
+    [Authorize(Policy = "Kiosk.Delete")]
     public async Task<IActionResult> Delete(int id)
     {
         await _kioskService.DeleteTemplateAsync(id);
@@ -82,6 +84,7 @@ public class KioskAdminController : Controller
     }
 
     [HttpPost]
+    [Authorize(Policy = "Kiosk.Edit")]
     public async Task<IActionResult> ToggleStatus(int id)
     {
         await _kioskService.ToggleTemplateStatusAsync(id);

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Platform.Shared.Services;
 using ConfigurationKiosk.Models;
 using Microsoft.Extensions.Logging;
+using System.Security.Claims;
 
 namespace ConfigurationKiosk.Controllers;
 
@@ -10,16 +11,20 @@ namespace ConfigurationKiosk.Controllers;
 public class KioskController : Controller
 {
     private readonly IKioskService _kioskService;
+    private readonly IAuthorizationService _authorizationService;
     private readonly ILogger<KioskController> _logger;
 
-    public KioskController(IKioskService kioskService, ILogger<KioskController> logger)
+    public KioskController(IKioskService kioskService, IAuthorizationService authorizationService, ILogger<KioskController> logger)
     {
         _kioskService = kioskService;
+        _authorizationService = authorizationService;
         _logger = logger;
     }
 
     public async Task<IActionResult> Index()
     {
+        ViewData["CanCreate"] = (await _authorizationService.AuthorizeAsync(User, "Kiosk.Create")).Succeeded;
+
         try
         {
             var instances = await _kioskService.GetRecentInstancesAsync();
@@ -42,6 +47,7 @@ public class KioskController : Controller
     }
 
     [HttpPost]
+    [Authorize(Policy = "Kiosk.Create")]
     public async Task<IActionResult> Create(int templateId, string machineSerial)
     {
         var userId = User.Identity?.Name ?? "Unknown";
@@ -51,6 +57,8 @@ public class KioskController : Controller
 
     public async Task<IActionResult> Compile(int id)
     {
+        ViewData["CanEdit"] = (await _authorizationService.AuthorizeAsync(User, "Kiosk.Edit")).Succeeded;
+
         var instance = await _kioskService.GetInstanceByIdAsync(id);
         if (instance == null) return NotFound();
 
@@ -63,7 +71,8 @@ public class KioskController : Controller
         return View(model);
     }
 
-    [HttpPost]
+    [HttpPatch]
+    [Authorize(Policy = "Kiosk.Edit")]
     public async Task<IActionResult> Save([FromBody] SaveRequest request)
     {
         var userId = User.Identity?.Name ?? "Unknown";
@@ -71,7 +80,8 @@ public class KioskController : Controller
         return Ok();
     }
 
-    [HttpPost]
+    [HttpPatch]
+    [Authorize(Policy = "Kiosk.Edit")]
     public async Task<IActionResult> Complete([FromBody] CompleteRequest request)
     {
         var userId = User.Identity?.Name ?? "Unknown";
@@ -81,7 +91,7 @@ public class KioskController : Controller
     }
 
     [Authorize(Roles = "Admin")]
-    [HttpPost]
+    [HttpPatch]
     public async Task<IActionResult> StartRevision([FromBody] InstanceRequest request)
     {
         var userId = User.Identity?.Name ?? "Unknown";
@@ -90,7 +100,7 @@ public class KioskController : Controller
     }
 
     [Authorize(Roles = "Admin")]
-    [HttpPost]
+    [HttpPatch]
     public async Task<IActionResult> FinalizeRevision([FromBody] FinalizeRequest request)
     {
         var userId = User.Identity?.Name ?? "Unknown";
@@ -98,12 +108,12 @@ public class KioskController : Controller
         return Ok(new { changesDetected = result });
     }
 
-    [Authorize(Roles = "Admin")]
-    [HttpPost]
+    [HttpDelete]
+    [Authorize(Policy = "Kiosk.Delete")]
     public async Task<IActionResult> DeleteInstance(int id)
     {
         await _kioskService.DeleteInstanceAsync(id);
-        return RedirectToAction(nameof(Index));
+        return Ok();
     }
 
     public async Task<IActionResult> History(int id)

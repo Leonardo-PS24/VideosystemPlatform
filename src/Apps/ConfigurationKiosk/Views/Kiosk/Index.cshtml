@@ -1,10 +1,17 @@
 ﻿@model ConfigurationKiosk.Models.KioskDashboardViewModel
+@using Microsoft.AspNetCore.Authorization
+@inject IAuthorizationService AuthorizationService
 
 @{
     ViewData["Title"] = "Configuration Kiosk";
 }
 
 <style>
+    :root {
+        --pharmaself-primary: #00955E;
+        --pharmaself-primary-bg: #E6F4F1;
+    }
+
     .kiosk-dashboard-container {
         height: calc(100vh - 140px);
         display: flex;
@@ -23,14 +30,13 @@
         display: flex;
         flex-direction: column;
         background: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        border: 1px solid #e0e0e0;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-sm);
     }
 
     .kiosk-list-header {
         padding: 15px 20px;
-        border-bottom: 1px solid #eee;
+        border-bottom: 1px solid var(--border-color);
         background: #f8f9fa;
         display: flex;
         justify-content: space-between;
@@ -42,10 +48,8 @@
     .kiosk-table-container {
         flex-grow: 1;
         overflow-y: auto;
-        -webkit-overflow-scrolling: touch; /* Smooth scroll su iOS */
     }
 
-    /* Progress Ring */
     .progress-ring {
         position: relative;
         width: 40px;
@@ -65,48 +69,19 @@
         transform: translate(-50%, -50%);
         font-size: 10px;
         font-weight: bold;
-        color: #666;
+        color: var(--text-secondary);
     }
 
-    /* Riga Cliccabile */
     .kiosk-row {
         cursor: pointer;
         transition: background-color 0.2s;
     }
 
     .kiosk-row:hover {
-        background-color: #f1f8f5 !important;
+        background-color: var(--pharmaself-primary-bg) !important;
     }
 
-    /* Responsive Table */
-    @@media (max-width: 768px) {
-        .kiosk-dashboard-container {
-            height: auto; /* Lascia scrollare la pagina su mobile */
-            overflow: visible;
-        }
-        
-        .kiosk-list-section {
-            overflow: visible;
-        }
-        
-        .kiosk-table-container {
-            overflow-x: auto; /* Scroll orizzontale per la tabella */
-        }
-        
-        .hide-mobile {
-            display: none;
-        }
-        
-        .kiosk-list-header {
-            flex-direction: column;
-            align-items: stretch;
-        }
-        
-        .kiosk-list-header .input-group {
-            width: 100% !important;
-        }
-        
-        /* Card creazione su mobile */
+    @@media (max-width: 992px) {
         .kiosk-header-section .card-body .row {
             flex-direction: column;
             gap: 15px;
@@ -127,15 +102,42 @@
             width: 100%;
         }
     }
+
+    @@media (max-width: 768px) {
+        .kiosk-dashboard-container {
+            height: auto;
+            overflow: visible;
+        }
+        
+        .kiosk-list-section {
+            overflow: visible;
+        }
+        
+        .kiosk-table-container {
+            overflow-x: auto;
+        }
+        
+        .hide-mobile {
+            display: none;
+        }
+        
+        .kiosk-list-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .kiosk-list-header .input-group {
+            width: 100% !important;
+        }
+    }
 </style>
 
 <div class="container-fluid kiosk-dashboard-container">
     
-    <!-- Sezione Superiore: Creazione e Info -->
     <div class="kiosk-header-section">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h1 class="mb-0 fw-bold text-dark fs-4 fs-md-2">Configuration Kiosk</h1>
-            @if (User.IsInRole("Admin"))
+            <h1 class="mb-0 fw-bold fs-4 fs-md-2">Configuration Kiosk</h1>
+            @if (User.IsInRole("Admin") && (await AuthorizationService.AuthorizeAsync(User, "Kiosk.Create")).Succeeded)
             {
                 <a asp-controller="KioskAdmin" asp-action="Index" class="btn btn-outline-secondary btn-sm">
                     <span class="material-icons align-middle me-1">settings</span> <span class="d-none d-md-inline">Gestione Template</span>
@@ -143,46 +145,48 @@
             }
         </div>
 
-        <div class="card shadow-sm border-0 bg-primary text-white" style="background: linear-gradient(135deg, var(--vs-green) 0%, var(--vs-green-dark) 100%) !important;">
-            <div class="card-body p-4">
-                <div class="row align-items-center">
-                    <div class="col-md-8">
-                        <h4 class="fw-bold mb-1">Nuova Configurazione</h4>
-                        <p class="mb-0 opacity-75">Seleziona un modello e inserisci la matricola.</p>
-                    </div>
-                    <div class="col-md-4">
-                        <form asp-action="Create" method="post" class="d-flex gap-2">
-                            <select name="templateId" class="form-select border-0" required style="max-width: 200px;">
-                                <option value="">Seleziona Modello...</option>
-                                @foreach (var template in Model.AvailableTemplates)
-                                {
-                                    <option value="@template.Id">@template.Name</option>
-                                }
-                            </select>
-                            <input type="text" name="machineSerial" class="form-control border-0" required placeholder="Matricola (SN)" style="max-width: 150px;" />
-                            <button type="submit" class="btn btn-light text-primary fw-bold">
-                                <span class="material-icons">add</span>
-                            </button>
-                        </form>
+        @if ((await AuthorizationService.AuthorizeAsync(User, "Kiosk.Create")).Succeeded)
+        {
+            <div class="card text-white" style="background-color: var(--pharmaself-primary);">
+                <div class="card-body p-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h4 class="fw-bold mb-1">Nuova Configurazione</h4>
+                            <p class="mb-0 opacity-75">Seleziona un modello e inserisci la matricola per iniziare.</p>
+                        </div>
+                        <div class="col-md-4">
+                            <form asp-action="Create" method="post" class="d-flex gap-2">
+                                <select name="templateId" class="form-select" required style="max-width: 200px;">
+                                    <option value="">Seleziona Modello...</option>
+                                    @foreach (var template in Model.AvailableTemplates)
+                                    {
+                                        <option value="@template.Id">@template.Name</option>
+                                    }
+                                </select>
+                                <input type="text" name="machineSerial" class="form-control" required placeholder="Matricola (SN)" style="max-width: 150px;" />
+                                <button type="submit" class="btn btn-light fw-bold" style="color: var(--pharmaself-primary);">
+                                    <span class="material-icons">add</span>
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        }
     </div>
 
-    <!-- Sezione Inferiore: Lista Scrollabile -->
     <div class="kiosk-list-section">
         <div class="kiosk-list-header">
             <h5 class="mb-0 fw-bold text-secondary">Configurazioni Recenti</h5>
             <div class="input-group" style="width: 300px;">
-                <span class="input-group-text bg-white border-end-0"><i class="material-icons text-muted" style="font-size: 20px;">search</i></span>
+                <span class="input-group-text bg-light border-end-0"><i class="material-icons text-muted" style="font-size: 20px;">search</i></span>
                 <input type="text" id="searchKiosk" class="form-control border-start-0 ps-0" placeholder="Cerca matricola o modello...">
             </div>
         </div>
         
         <div class="kiosk-table-container">
             <table class="table table-hover align-middle mb-0" id="kioskTable">
-                <thead class="bg-light sticky-top" style="top: 0; z-index: 10;">
+                <thead class="sticky-top bg-light" style="top: 0; z-index: 10;">
                     <tr>
                         <th class="ps-4">Stato</th>
                         <th>Matricola</th>
@@ -200,48 +204,46 @@
                             <td class="ps-4">
                                 @if (item.Status == "Completed")
                                 {
-                                    <span class="badge bg-success rounded-pill"><i class="material-icons align-middle" style="font-size: 12px;">check</i> <span class="d-none d-md-inline">Completato</span></span>
+                                    <span class="badge bg-success"><i class="material-icons align-middle" style="font-size: 12px;">check</i> <span class="d-none d-lg-inline">Completato</span></span>
                                 }
                                 else
                                 {
-                                    <span class="badge bg-warning text-dark rounded-pill"><i class="material-icons align-middle" style="font-size: 12px;">hourglass_empty</i> <span class="d-none d-md-inline">In Corso</span></span>
+                                    <span class="badge bg-warning text-dark"><i class="material-icons align-middle" style="font-size: 12px;">hourglass_empty</i> <span class="d-none d-lg-inline">In Corso</span></span>
                                 }
                             </td>
-                            <td class="fw-bold text-dark matricola-cell">@item.MachineSerialNumber</td>
-                            <td class="text-secondary model-cell">@item.Template?.Name</td>
+                            <td class="fw-bold">@item.MachineSerialNumber</td>
+                            <td class="text-secondary">@item.Template?.Name</td>
                             <td class="text-muted small hide-mobile">@item.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
                             <td class="hide-mobile">
                                 <div class="d-flex align-items-center">
-                                    <div class="bg-light rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px; font-size: 10px; font-weight: bold; color: var(--vs-green);">
+                                    <div class="bg-light rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px; font-size: 10px; font-weight: bold; color: var(--pharmaself-primary);">
                                         @item.CreatedBy.Substring(0, 1).ToUpper()
                                     </div>
-                                    <span class="small">@item.CreatedBy</span>
+                                    <span class="small">@(item.CreatedBy.Contains('@') ? item.CreatedBy.Split('@')[0] : item.CreatedBy)</span>
                                 </div>
                             </td>
                             <td class="text-center">
                                 <div class="progress-ring mx-auto" data-progress="@item.Progress">
                                     <svg class="progress-ring__svg" width="40" height="40">
-                                        <circle class="progress-ring__circle-bg" stroke="#eee" stroke-width="3" fill="transparent" r="16" cx="20" cy="20"/>
-                                        <circle class="progress-ring__circle" stroke="var(--vs-green)" stroke-width="3" fill="transparent" r="16" cx="20" cy="20"/>
+                                        <circle class="progress-ring__circle-bg" stroke="var(--border-color)" stroke-width="3" fill="transparent" r="16" cx="20" cy="20"/>
+                                        <circle class="progress-ring__circle" stroke="var(--pharmaself-primary)" stroke-width="3" fill="transparent" r="16" cx="20" cy="20"/>
                                     </svg>
                                     <span class="progress-ring__text">@item.Progress%</span>
                                 </div>
                             </td>
                             <td class="text-end pe-4" onclick="event.stopPropagation()">
-                                <div class="btn-group">
-                                    <a href="@Url.Action("Compile", new { id = item.Id })?print=true" target="_blank" class="btn btn-sm btn-outline-secondary border-0" title="Stampa">
+                                <div class="d-flex justify-content-end gap-1">
+                                    <a href="@Url.Action("Compile", new { id = item.Id })?print=true" target="_blank" class="btn btn-sm btn-outline-primary" title="Stampa">
                                         <span class="material-icons">print</span>
                                     </a>
-                                    
-                                    <a asp-action="History" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary border-0" title="Storico">
+                                    <a asp-action="History" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary" title="Storico">
                                         <span class="material-icons">history</span>
                                     </a>
-                                    
-                                    @if (User.IsInRole("Admin"))
+                                    @if ((await AuthorizationService.AuthorizeAsync(User, "Kiosk.Delete")).Succeeded)
                                     {
                                         <form asp-action="DeleteInstance" method="post" class="d-inline" onsubmit="return confirm('Eliminare questa configurazione?');">
                                             <input type="hidden" name="id" value="@item.Id" />
-                                            <button type="submit" class="btn btn-sm btn-outline-danger border-0" title="Elimina">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Elimina">
                                                 <span class="material-icons">delete</span>
                                             </button>
                                         </form>
@@ -270,13 +272,12 @@
             
             text.textContent = percent + '%';
             
-            if (percent === 100) circle.style.stroke = 'var(--vs-green)';
-            else if (percent > 50) circle.style.stroke = '#f59e0b';
-            else circle.style.stroke = '#ef4444';
+            if (percent === 100) circle.style.stroke = 'var(--bs-success)';
+            else if (percent > 50) circle.style.stroke = 'var(--bs-warning)';
+            else circle.style.stroke = 'var(--bs-danger)';
         }
 
         $(document).ready(function() {
-            // Ricerca
             $('#searchKiosk').on('keyup', function() {
                 var value = $(this).val().toLowerCase();
                 $("#kioskTable tbody tr").filter(function() {
@@ -284,31 +285,27 @@
                 });
             });
 
-            // Inizializzazione Progress Rings
             $('.progress-ring').each(function() {
                 const percent = $(this).data('progress') || 0;
                 updateProgressRing(this, percent);
             });
 
-            // SignalR Connection
             const connection = new signalR.HubConnectionBuilder()
                 .withUrl("/kioskhub")
                 .build();
 
-            connection.on("UpdateProgress", function (instanceId, newProgress) {
+            connection.on("UpdateProgress", (instanceId, newProgress) => {
                 const row = $(`tr[data-instance-id="${instanceId}"]`);
                 if (row.length) {
-                    const ring = row.find('.progress-ring')[0];
-                    updateProgressRing(ring, newProgress);
+                    updateProgressRing(row.find('.progress-ring')[0], newProgress);
                 }
             });
             
-            connection.on("InstanceCompleted", function (instanceId) {
+            connection.on("InstanceCompleted", (instanceId) => {
                 const row = $(`tr[data-instance-id="${instanceId}"]`);
                 if (row.length) {
-                    const ring = row.find('.progress-ring')[0];
-                    updateProgressRing(ring, 100);
-                    row.find('.badge').removeClass('bg-warning text-dark').addClass('bg-success').html('<i class="material-icons align-middle" style="font-size: 12px;">check</i> Completato');
+                    updateProgressRing(row.find('.progress-ring')[0], 100);
+                    row.find('.badge').removeClass('bg-warning text-dark').addClass('bg-success').html('<i class="material-icons align-middle" style="font-size: 12px;">check</i> <span class="d-none d-lg-inline">Completato</span>');
                 }
             });
 
