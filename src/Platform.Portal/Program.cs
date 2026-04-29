@@ -1,9 +1,14 @@
-using Microsoft.AspNetCore.Authorization; // Aggiunto
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Platform.Portal.Data;
 using Microsoft.FeatureManagement;
-using Platform.Portal.Authorization; // Aggiunto
+using Platform.Portal.Authorization;
 using Platform.Portal.Middleware;
 using Platform.Portal.Models;
 using Platform.Portal.Services;
@@ -11,6 +16,7 @@ using Platform.Portal.Settings;
 using Platform.Shared.Services;
 using Platform.Portal.Hubs;
 using Serilog;
+using System;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -63,6 +69,12 @@ builder.Services.AddAuthorization(options =>
 // Configura le impostazioni
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 
+// Configura Forwarded Headers per il deploy dietro a un reverse proxy (IIS)
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+});
+
 // Configura cookie authentication
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -81,10 +93,13 @@ builder.Services.AddSingleton<IJwtService>(new JwtService(jwtSecretKey));
 // Configura HTTPS
 builder.Services.AddHttpsRedirection(options =>
 {
-    options.HttpsPort = 5001;
+    options.HttpsPort = 443; // Usa la porta standard HTTPS quando reindirizza
 });
 
 var app = builder.Build();
+
+// Applica il middleware per i Forwarded Headers
+app.UseForwardedHeaders();
 
 // Inizializzazione Database
 using (var scope = app.Services.CreateScope())
@@ -95,10 +110,6 @@ using (var scope = app.Services.CreateScope())
         var context = services.GetRequiredService<ApplicationDbContext>();
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
-        
-        Log.Information("Verifica e inizializzazione database...");
-        // In produzione, le migrazioni dovrebbero essere applicate manualmente o con uno script di deploy.
-        // await context.Database.EnsureCreatedAsync(); // Questo può essere rischioso in produzione.
         
         await DbInitializer.Initialize(context, userManager, roleManager);
         Log.Information("Inizializzazione dati completata");
