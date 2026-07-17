@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Platform.Portal.Data;
@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Platform.Portal.Models.ViewModels;
+using Microsoft.AspNetCore.Http;
 
 namespace Platform.Portal.Services;
 
@@ -18,35 +19,83 @@ public class PermissionService : IPermissionService
 {
     private readonly ApplicationDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly RoleManager<IdentityRole> _roleManager;
+    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ILogger<PermissionService> _logger;
 
     public PermissionService(
         ApplicationDbContext context,
         UserManager<ApplicationUser> userManager,
+        RoleManager<IdentityRole> roleManager,
+        IHttpContextAccessor httpContextAccessor,
         ILogger<PermissionService> logger)
     {
         _context = context;
         _userManager = userManager;
+        _roleManager = roleManager;
+        _httpContextAccessor = httpContextAccessor;
         _logger = logger;
     }
 
     // ... (metodi esistenti non modificati) ...
     public async Task<bool> HasPermissionAsync(string userId, string applicationName, PermissionType permission)
     {
-        // Admin ha sempre tutti i permessi
+        // 1. Controllo Dev Mode attiva per Developer o Admin
+        var httpContext = _httpContextAccessor?.HttpContext;
+        bool isDevMode = httpContext?.Request.Cookies["dev_mode"] == "true";
+
+        if (isDevMode)
+        {
+            var devUser = await _userManager.FindByIdAsync(userId);
+            if (devUser != null)
+            {
+                var roles = await _userManager.GetRolesAsync(devUser);
+                if (roles.Contains("Developer") || roles.Contains("Admin"))
+                {
+                    return true;
+                }
+            }
+        }
+
+        // 2. Admin ha sempre tutti i permessi
         if (await IsAdminAsync(userId))
         {
             return true;
         }
 
-        var userPermission = await GetPermissionAsync(userId, applicationName);
-        
-        if (userPermission == null)
+        // 3. Controllo Override specifico per Utente
+        var userOverride = await GetPermissionAsync(userId, applicationName);
+        if (userOverride != null)
         {
-            return false;
+            return userOverride.HasPermission(permission);
         }
 
-        return userPermission.HasPermission(permission);
+        // 4. Controllo ereditarietà dai ruoli dell'utente (reparti)
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user != null)
+        {
+            var userRoles = await _userManager.GetRolesAsync(user);
+            if (userRoles.Any())
+            {
+                var rolePermissions = await _context.RolePermissions
+                    .Where(p => userRoles.Contains(p.RoleName) && p.ApplicationName == applicationName)
+                    .ToListAsync();
+
+                if (rolePermissions.Any())
+                {
+                    return permission switch
+                    {
+                        PermissionType.View => rolePermissions.Any(rp => rp.CanView),
+                        PermissionType.Create => rolePermissions.Any(rp => rp.CanCreate),
+                        PermissionType.Edit => rolePermissions.Any(rp => rp.CanEdit),
+                        PermissionType.Delete => rolePermissions.Any(rp => rp.CanDelete),
+                        _ => false
+                    };
+                }
+            }
+        }
+
+        return false;
     }
     public async Task<bool> IsAdminAsync(string userId)
     {
@@ -273,5 +322,61 @@ public class PermissionService : IPermissionService
             _logger.LogError(ex, "Error getting permission matrix");
             throw;
         }
+    }
+
+    public async Task<List<RolePermission>> GetRolePermissionsAsync(string roleName)
+    {
+        return await _context.RolePermissions
+            .Where(rp => rp.RoleName == roleName)
+            .ToListAsync();
+    }
+
+    public async Task SaveRolePermissionsAsync(string roleName, Dictionary<string, PermissionType> permissions)
+    {
+        foreach (var kvp in permissions)
+        {
+            var applicationName = kvp.Key;
+            var permission = kvp.Value;
+
+            var existingPermission = await _context.RolePermissions
+                .FirstOrDefaultAsync(rp => rp.RoleName == roleName && rp.ApplicationName == applicationName);
+
+            if (permission == PermissionType.None)
+            {
+                if (existingPermission != null)
+                {
+                    _context.RolePermissions.Remove(existingPermission);
+                }
+            }
+            else
+            {
+                if (existingPermission == null)
+                {
+                    existingPermission = new RolePermission
+                    {
+                        RoleName = roleName,
+                        ApplicationName = applicationName
+                    };
+                    _context.RolePermissions.Add(existingPermission);
+                }
+
+                existingPermission.CanView = permission.HasFlag(PermissionType.View);
+                existingPermission.CanCreate = permission.HasFlag(PermissionType.Create);
+                existingPermission.CanEdit = permission.HasFlag(PermissionType.Edit);
+                existingPermission.CanDelete = permission.HasFlag(PermissionType.Delete);
+                existingPermission.UpdatedAt = DateTime.UtcNow;
+            }
+        }
+
+        await _context.SaveChangesAsync();
+        _logger.LogInformation("Saved role-based permissions for role {RoleName}", roleName);
+    }
+
+    public async Task<List<string>> GetAllRolesAsync()
+    {
+        return await _roleManager.Roles
+            .Select(r => r.Name!)
+            .OrderBy(r => r)
+            .ToListAsync();
     }
 }

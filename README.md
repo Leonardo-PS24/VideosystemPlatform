@@ -1,181 +1,149 @@
 # Videosystem Internal Platform
 
-> Piattaforma modulare per applicazioni aziendali interne - Videosystem S.r.l.
+> Piattaforma modular aziendale per applicazioni interne - Videosystem S.r.l.
 
 ## 📋 Descrizione
 
-La **Videosystem Internal Platform** è un'infrastruttura moderna e scalabile progettata per ospitare tutte le applicazioni aziendali interne di Videosystem S.r.l. 
+La **Videosystem Internal Platform** è un'infrastruttura moderna e scalabile progettata per ospitare e centralizzare tutte le applicazioni aziendali interne di Videosystem S.r.l. 
 
-L'architettura adottata è **Portal + Microservices**, che permette:
-- ✅ Autenticazione centralizzata unica per tutte le applicazioni
-- ✅ Dashboard centrale con accesso rapido alle applicazioni
-- ✅ Gestione utenti unificata
-- ✅ Deploy indipendente di ogni applicazione
-- ✅ Scalabilità e manutenibilità ottimali
+L'architettura adottata è **Portal (Single Page Application in React) + Web API C# (.NET 10)**, che offre:
+- ✅ Autenticazione centralizzata unica per tutte le applicazioni (con supporto login esterno Google e Microsoft)
+- ✅ Dashboard centrale con accesso rapido basato sui permessi
+- ✅ Gestione utenti e permessi granulari centralizzati (solo Admin)
+- ✅ Struttura modulare con deploy e integrazione fluida
+- ✅ Separazione netta tra Frontend (React) e Backend (C# REST API)
 
-## 🏗️ Architettura
+---
+
+## 🏗️ Architettura & Struttura Cartelle
 
 ```
 VideosystemPlatform/
-├── Platform.Portal          # Shell centrale + Autenticazione
-├── Platform.Shared          # Libreria condivisa
-└── Apps/
-    ├── KioskRegistration    # Prima applicazione (gestione kiosk)
-    └── [Future Apps]        # Applicazioni future
+├── src/
+│   ├── Platform.Client          # Frontend SPA (React + TypeScript + Vite)
+│   ├── Platform.Portal          # Backend API (.NET 10 Web API) & Server Statico
+│   ├── Platform.Shared          # Libreria C# condivisa (Costanti, Entità, Utility)
+│   └── Apps/
+│       └── ConfigurationKiosk   # Modulo Kiosk Checklist (Checklist, Hub SignalR)
+└── docs/                        # Documentazione dettagliata di progetto
 ```
 
 ### Componenti Principali
 
-#### 1. Platform.Portal (https://localhost:5001)
-- **Dashboard centrale** con lista applicazioni disponibili
-- **Autenticazione** tramite ASP.NET Core Identity
-- **Gestione utenti** completa (solo Admin)
-- **JWT Token issuer** per comunicazione sicura tra servizi
+#### 1. Platform.Client (Porta: 5173 / Proxy backend)
+- Sviluppata in **React 19 + TypeScript + Vite**.
+- Fornisce la Single Page Application (SPA) con il design system Videosystem (Google Fonts Outfit/Roboto + Bootstrap).
+- Gestisce Login, Dashboard con orologio digitale, Gestione Utenti, Gestione Permessi, e compilazione/cronologia Kiosk Checklist.
 
-#### 2. Platform.Shared
+#### 2. Platform.Portal (Porta: 5001 / HTTPS)
+- Sviluppata in **ASP.NET Core 10.0 Web API**.
+- Serve i file compilati di React (dalla cartella `wwwroot/`) e gestisce le richieste `/api/*` e i controller di account/OAuth.
+- Autenticazione ibrida: Cookie HttpOnly per la sicurezza della sessione SPA + integrazione Google e Microsoft OAuth.
+
+#### 3. Platform.Shared
 Libreria condivisa con:
-- Costanti comuni (colori aziendali, configurazioni)
-- Servizi condivisi (JWT, logging)
-- Helper utilities (crittografia, validazione file)
-- Modelli base (entità auditable, API response)
+- Costanti aziendali (colori sociali, ruoli).
+- Helper comuni (crittografia AES-256, validazione file).
+- Modelli base ed entità database (`AuditableEntity`).
 
-#### 3. Apps/KioskRegistration (https://localhost:5002)
-Prima applicazione della piattaforma per la gestione dei kiosk aziendali.
-*(Documentazione dettagliata in `/Apps/KioskRegistration/README.md`)*
+#### 4. Apps/ConfigurationKiosk
+Modulo integrato nella piattaforma per la gestione delle checklist di calibrazione e configurazione delle macchine aziendali:
+- Gestisce checklist interattive con salvataggio bozza ed autosalvataggio automatico debounced.
+- Integra aggiornamenti in tempo reale sul progresso delle compilazioni tramite **SignalR WebSocket**.
 
-## 🎨 Design System
+---
 
-### Colori Aziendali Videosystem
-- **Verde principale**: `#00945E`
-- **Bianco**: `#FFFFFF`
-- **Grigio scuro**: `#333333`
-- **Grigio chiaro**: `#F8F9FA`
+## 🎨 Design System & Colori Aziendali
 
-### UI Framework
-- **Bootstrap 5** per layout responsive
-- **Material Icons** per iconografia
-- **Font Roboto** per tipografia
+La piattaforma segue l'identità visiva ufficiale di **Videosystem S.r.l.**:
+- **Verde Primario**: `#00945E` (usato per l'header aziendale, card dei moduli, bottoni principali).
+- **Colore Secondario**: `#FFFFFF` / Grigio Chiaro (`#F8F9FA`).
+- **Iconografia**: Google Material Icons e Bootstrap Icons.
+- **Tipografia**: Outfit / Inter / Roboto.
 
-## 🔐 Sicurezza
-
-- ✅ **Autenticazione** via ASP.NET Core Identity
-- ✅ **Password hashing** con Identity default (PBKDF2)
-- ✅ **JWT Token** per comunicazione tra servizi
-- ✅ **HTTPS obbligatorio** in produzione
-- ✅ **CSRF Protection** su tutti i form
-- ✅ **Input Validation** client e server-side
-- ✅ **Role-based authorization** (Admin, User)
+---
 
 ## 🚀 Quick Start
 
 ### Prerequisiti
-- .NET 8 SDK
-- SQL Server (LocalDB o Express)
-- Visual Studio 2022 / Rider / VS Code
+- ✅ **.NET 10 SDK** o superiore
+- ✅ **Node.js** (versione 18 o superiore)
+- ✅ Istanza **PostgreSQL** (Supabase localmente su `192.168.1.111:54322`)
 
-### Setup Iniziale
+### Configurazione Iniziale
 
-1. **Clone del repository**
-```bash
-git clone [repository-url]
-cd VideosystemPlatform
-```
+1. **Clonare la repository**:
+   ```bash
+   git clone [repository-url]
+   cd VideosystemPlatform
+   ```
 
-2. **Configurazione Database**
-   
-Modifica `src/Platform.Portal/appsettings.json`:
-```json
-"ConnectionStrings": {
-  "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=VideosystemPortal;Trusted_Connection=True;"
-}
-```
+2. **Configurazione Backend**:
+   Modificare `src/Platform.Portal/appsettings.json` impostando la stringa di connessione PostgreSQL:
+   ```json
+   "ConnectionStrings": {
+     "DefaultConnection": "Host=192.168.1.111;Port=54322;Database=postgres;Username=postgres;Password=[tua-password];SSL Mode=Disable;Trust Server Certificate=True"
+   }
+   ```
 
-3. **Creazione Database**
-```bash
-cd src/Platform.Portal
-dotnet ef database update
-```
+3. **Configurazione OAuth (Google/Microsoft)**:
+   Configurare le credenziali in `appsettings.json` o tramite User Secrets:
+   ```json
+   "Authentication": {
+     "Google": {
+       "ClientId": "[GOOGLE_CLIENT_ID]",
+       "ClientSecret": "[GOOGLE_CLIENT_SECRET]"
+     },
+     "Microsoft": {
+       "ClientId": "[MICROSOFT_CLIENT_ID]",
+       "ClientSecret": "[MICROSOFT_CLIENT_SECRET]"
+     }
+   }
+   ```
 
-4. **Avvio del Portal**
-```bash
-dotnet run
-```
-
-Apri: https://localhost:5001
-
-### Credenziali di Default
-
-**Administrator:**
-- Username: `admin`
-- Password: `Admin123!`
-
-**User Standard:**
-- Username: `user`
-- Password: `User123!`
-
-## 📊 Stack Tecnologico
-
-| Componente | Tecnologia |
-|------------|-----------|
-| **Backend** | ASP.NET Core 8 MVC |
-| **Frontend** | Razor Pages, Bootstrap 5 |
-| **Database** | SQL Server + Entity Framework Core |
-| **Autenticazione** | ASP.NET Core Identity + JWT |
-| **Logging** | Serilog |
-| **ORM** | Entity Framework Core 8 |
-
-## 📝 Standard di Codifica
-
-Il progetto segue rigorosamente le **Linee Guida Videosystem**:
-
-- ✅ Clean Architecture (Domain, Application, Infrastructure, Presentation)
-- ✅ Convenzioni di naming .NET standard
-- ✅ Commenti XML per metodi pubblici
-- ✅ Separazione logica nei servizi (no logica nei controller)
-- ✅ DTO per input/output
-- ✅ Logging centralizzato con Serilog
-- ✅ Configurazioni per ambiente (Development, Staging, Production)
-
-## 🔧 Configurazione Applicazioni
-
-Per aggiungere una nuova applicazione alla dashboard, modifica `appsettings.json` del Portal:
-
-```json
-"Applications": [
-  {
-    "Name": "Nome Applicazione",
-    "Description": "Descrizione breve",
-    "Url": "https://localhost:5003",
-    "Icon": "apps",
-    "RequiredRole": "User"
-  }
-]
-```
-
-## 📖 Documentazione Aggiuntiva
-
-- [Setup Dettagliato](docs/SETUP.md)
-- [Guida Sviluppo](docs/DEVELOPMENT.md)
-- [Architettura Clean](docs/ARCHITECTURE.md)
-- [Linee Guida Videosystem](docs/VIDEOSYSTEM_GUIDELINES.md)
-
-## 🏢 Informazioni Aziendali
-
-**Videosystem S.r.l.**  
-Via Lago di Albano, 45 | 36015 Schio - Italia  
-Tel: +39 0445 500 500  
-Web: www.videosystem.it
-
-## 📄 Licenza
-
-© 2024 Videosystem S.r.l. - Uso interno aziendale
-
-## 🤝 Supporto
-
-Per supporto tecnico o domande, contattare il team IT interno.
+4. **Migrazioni del Database**:
+   ```bash
+   cd src/Platform.Portal
+   dotnet ef database update
+   ```
 
 ---
 
-**Versione**: 1.0.0  
-**Data**: Novembre 2024  
-**Documento**: INTC_202511251125
+## 💻 Avvio in Ambiente di Sviluppo
+
+Per avviare la piattaforma in locale con caricamento a caldo (Hot Reload), eseguire in due terminali paralleli:
+
+### Terminale 1 (Backend API)
+```bash
+cd src/Platform.Portal
+dotnet run
+```
+*Le API risponderanno su `https://localhost:5001`.*
+
+### Terminale 2 (Frontend React)
+```bash
+cd src/Platform.Client
+npm install
+npm run dev
+```
+*Il frontend sarà accessibile su `http://localhost:5173` (con proxy automatico configurato verso il backend C#).*
+
+---
+
+## 📊 Stack Tecnologico
+
+| Componente | Tecnologia Adottata |
+|------------|---------------------|
+| **Frontend** | React 19, TypeScript, Vite, Bootstrap 5 |
+| **Backend** | ASP.NET Core 10 Web API, SignalR |
+| **Database** | PostgreSQL / Supabase, Entity Framework Core 10 |
+| **Autenticazione** | ASP.NET Core Identity (HttpOnly Cookie) + OAuth (Google, Microsoft) |
+| **Realtime** | WebSocket (ASP.NET Core SignalR) |
+
+---
+
+## 🏢 Videosystem S.r.l.
+Via Lago di Albano, 45 | 36015 Schio - Italia  
+Web: [www.videosystem.it](https://www.videosystem.it)
+
+© 2026 Videosystem S.r.l. - Uso interno aziendale

@@ -16,6 +16,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     }
 
     public DbSet<ApplicationPermission> ApplicationPermissions { get; set; }
+    public DbSet<RolePermission> RolePermissions { get; set; }
     public DbSet<KioskChecklistTemplate> KioskChecklistTemplates { get; set; }
     public DbSet<KioskChecklistInstance> KioskChecklistInstances { get; set; }
     public DbSet<KioskChecklistHistory> KioskChecklistHistories { get; set; } // Aggiunto

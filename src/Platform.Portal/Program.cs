@@ -35,12 +35,13 @@ builder.Host.UseSerilog();
 
 // Aggiungi servizi al container
 builder.Services.AddControllersWithViews();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddSignalR();
 builder.Services.AddFeatureManagement();
 
-// Configura DbContext (SQL Server)
+// Configura DbContext (PostgreSQL - Supabase)
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Configura Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
@@ -49,6 +50,19 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
+
+// Configura Autenticazione Esterna con Google e Microsoft
+builder.Services.AddAuthentication()
+    .AddGoogle(options =>
+    {
+        options.ClientId = builder.Configuration["Authentication:Google:ClientId"] ?? throw new InvalidOperationException("Google ClientId non configurato");
+        options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? throw new InvalidOperationException("Google ClientSecret non configurato");
+    })
+    .AddMicrosoftAccount(options =>
+    {
+        options.ClientId = builder.Configuration["Authentication:Microsoft:ClientId"] ?? throw new InvalidOperationException("Microsoft ClientId non configurato");
+        options.ClientSecret = builder.Configuration["Authentication:Microsoft:ClientSecret"] ?? throw new InvalidOperationException("Microsoft ClientSecret non configurato");
+    });
 
 // Registra i servizi
 builder.Services.AddScoped<IPermissionService, PermissionService>();
@@ -90,6 +104,14 @@ var jwtSecretKey = builder.Configuration["Jwt:SecretKey"]
     ?? throw new InvalidOperationException("JWT SecretKey non configurata");
 builder.Services.AddSingleton<IJwtService>(new JwtService(jwtSecretKey));
 
+// Configura Supabase Client SDK
+var supabaseUrl = builder.Configuration["Supabase:Url"] ?? throw new InvalidOperationException("Supabase Url non configurata");
+var supabaseKey = builder.Configuration["Supabase:Key"] ?? throw new InvalidOperationException("Supabase Key non configurata");
+builder.Services.AddSingleton(provider => new Supabase.Client(supabaseUrl, supabaseKey, new Supabase.SupabaseOptions
+{
+    AutoConnectRealtime = true
+}));
+
 // Configura HTTPS
 builder.Services.AddHttpsRedirection(options =>
 {
@@ -129,6 +151,7 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseDefaultFiles();
 app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
@@ -141,6 +164,8 @@ app.MapHub<KioskHub>("/kioskhub");
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+app.MapFallbackToFile("index.html");
 
 Log.Information("Platform Portal avviato");
 

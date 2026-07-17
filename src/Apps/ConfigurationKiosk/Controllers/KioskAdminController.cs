@@ -1,15 +1,15 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Http;
 using Platform.Shared.Models;
 using Platform.Shared.Services;
 using Microsoft.Extensions.Logging;
-using System.Linq;
 
 namespace ConfigurationKiosk.Controllers;
 
 [Authorize(Roles = "Admin")]
-public class KioskAdminController : Controller
+[ApiController]
+[Route("api/[controller]")]
+public class KioskAdminController : ControllerBase
 {
     private readonly IKioskService _kioskService;
     private readonly ILogger<KioskAdminController> _logger;
@@ -20,74 +20,86 @@ public class KioskAdminController : Controller
         _logger = logger;
     }
 
-    public async Task<IActionResult> Index()
+    /// <summary>
+    /// Restituisce tutti i template delle checklist (compresi quelli inattivi)
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> GetTemplates()
     {
         var templates = await _kioskService.GetAllTemplatesAsync();
-        return View(templates);
+        return Ok(templates);
     }
 
-    [Authorize(Policy = "Kiosk.Create")]
-    public IActionResult Create()
-    {
-        return View(new KioskChecklistTemplate { IsActive = true });
-    }
-
+    /// <summary>
+    /// Crea un nuovo template
+    /// </summary>
     [HttpPost]
     [Authorize(Policy = "Kiosk.Create")]
-    public async Task<IActionResult> Create(KioskChecklistTemplate template, IFormFile? jsonFile)
+    public async Task<IActionResult> CreateTemplate([FromBody] KioskChecklistTemplate template)
     {
-        if (jsonFile != null)
-        {
-            using var reader = new StreamReader(jsonFile.OpenReadStream());
-            template.StructureJson = await reader.ReadToEndAsync();
-            ModelState.Remove(nameof(template.StructureJson));
-        }
-        else if (string.IsNullOrWhiteSpace(template.StructureJson))
-        {
-            ModelState.AddModelError(nameof(template.StructureJson), "Devi caricare un file JSON o inserire la struttura.");
-        }
-
         ModelState.Remove(nameof(template.CreatedBy));
         ModelState.Remove(nameof(template.UpdatedBy));
         ModelState.Remove(nameof(template.CreatedAt));
         ModelState.Remove(nameof(template.UpdatedAt));
 
-        if (ModelState.IsValid)
+        if (string.IsNullOrWhiteSpace(template.StructureJson))
         {
-            try 
-            {
-                var userId = User.Identity?.Name ?? "Unknown";
-                await _kioskService.CreateTemplateAsync(template, userId);
-                return RedirectToAction(nameof(Index));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Errore durante il salvataggio del template");
-                ModelState.AddModelError("", "Si è verificato un errore durante il salvataggio.");
-            }
-        }
-        else
-        {
-            var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
-            _logger.LogWarning("Validazione fallita per Create Template: {Errors}", string.Join(", ", errors));
+            return BadRequest(new { message = "La struttura del template (JSON) è obbligatoria." });
         }
 
-        return View(template);
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        try 
+        {
+            var userId = User.Identity?.Name ?? "Unknown";
+            await _kioskService.CreateTemplateAsync(template, userId);
+            return Ok(new { message = "Template creato con successo" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Errore durante il salvataggio del template");
+            return StatusCode(500, new { message = "Si è verificato un errore durante il salvataggio del template." });
+        }
     }
     
-    [HttpPost]
+    /// <summary>
+    /// Elimina un template
+    /// </summary>
+    [HttpDelete("{id}")]
     [Authorize(Policy = "Kiosk.Delete")]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> DeleteTemplate(int id)
     {
-        await _kioskService.DeleteTemplateAsync(id);
-        return RedirectToAction(nameof(Index));
+        try
+        {
+            await _kioskService.DeleteTemplateAsync(id);
+            return Ok(new { message = "Template eliminato con successo" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Errore durante l'eliminazione del template {Id}", id);
+            return BadRequest(new { message = "Impossibile eliminare il template." });
+        }
     }
 
-    [HttpPost]
+    /// <summary>
+    /// Attiva/disattiva un template
+    /// </summary>
+    [HttpPost("{id}/toggle-status")]
     [Authorize(Policy = "Kiosk.Edit")]
     public async Task<IActionResult> ToggleStatus(int id)
     {
-        await _kioskService.ToggleTemplateStatusAsync(id);
-        return RedirectToAction(nameof(Index));
+        try
+        {
+            await _kioskService.ToggleTemplateStatusAsync(id);
+            return Ok(new { message = "Stato aggiornato con successo" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Errore durante il toggle dello stato del template {Id}", id);
+            return BadRequest(new { message = "Impossibile aggiornare lo stato del template." });
+        }
     }
 }

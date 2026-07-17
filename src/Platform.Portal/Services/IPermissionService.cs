@@ -1,4 +1,4 @@
-﻿using Platform.Portal.Models;
+using Platform.Portal.Models;
 using Platform.Portal.Models.ViewModels;
 
 namespace Platform.Portal.Services;
@@ -77,4 +77,19 @@ public interface IPermissionService
     /// <param name="applicationFilter">Filtro per applicazione (opzionale)</param>
     /// <returns>Oggetto con la matrice permessi</returns>
     Task<(List<UserPermissionRow> Users, List<string> Applications)> GetPermissionMatrixAsync(string? roleFilter = null, string? applicationFilter = null);
+    
+    /// <summary>
+    /// Ottiene i permessi per un ruolo specifico
+    /// </summary>
+    Task<List<RolePermission>> GetRolePermissionsAsync(string roleName);
+    
+    /// <summary>
+    /// Salva i permessi per un ruolo specifico (batch update)
+    /// </summary>
+    Task SaveRolePermissionsAsync(string roleName, Dictionary<string, PermissionType> permissions);
+    
+    /// <summary>
+    /// Ottiene tutti i ruoli disponibili nel sistema
+    /// </summary>
+    Task<List<string>> GetAllRolesAsync();
 }
