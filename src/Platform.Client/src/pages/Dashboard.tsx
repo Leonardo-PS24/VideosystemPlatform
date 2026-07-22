@@ -36,6 +36,7 @@ export default function Dashboard({ user }: DashboardProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
+  const [stats, setStats] = useState({ activeUsers: 0, completedChecklists: 0 });
   const [currentTime, setCurrentTime] = useState('--:--');
   const navigate = useNavigate();
 
@@ -69,14 +70,29 @@ export default function Dashboard({ user }: DashboardProps) {
         setError('Impossibile caricare le applicazioni disponibili.');
         setLoading(false);
       });
+
+    fetch('/api/Home/Stats')
+      .then((res) => {
+        if (res.ok) return res.json();
+        return { activeUsers: 0, completedChecklists: 0 };
+      })
+      .then((data) => {
+        setStats(data);
+      })
+      .catch(() => {});
   }, []);
 
   const handleAppLaunch = (app: ApplicationInfo) => {
-    if (app.comingSoon) return;
-    if (app.appId === 'ConfigurationKiosk' || app.appId === 'kiosk') {
+    const isComingSoon = app.comingSoon || (app as any).ComingSoon;
+    if (isComingSoon) return;
+
+    const appId = app.appId || (app as any).AppId;
+    const url = app.url || (app as any).Url;
+
+    if (appId === 'ConfigurationKiosk' || appId === 'kiosk') {
       navigate('/kiosk');
-    } else {
-      window.open(app.url, '_blank');
+    } else if (url) {
+      window.open(url, '_blank');
     }
   };
 
@@ -118,11 +134,11 @@ export default function Dashboard({ user }: DashboardProps) {
             <div className="col-12 col-md-4">
               <div className="card stat-card shadow-sm border-0">
                 <div className="stat-icon primary">
-                  <span className="material-icons">business</span>
+                  <span className="material-icons">people</span>
                 </div>
                 <div className="stat-info">
-                  <h3>{companies.length}</h3>
-                  <p>Aziende Gestite</p>
+                  <h3>{stats.activeUsers}</h3>
+                  <p>Utenti Attivi</p>
                 </div>
               </div>
             </div>
@@ -205,10 +221,14 @@ export default function Dashboard({ user }: DashboardProps) {
               ) : (
                 <div className="row g-4">
                   {company.applications.map((app) => {
-                    const appTitle = app.title || app.name || 'Applicazione';
-                    const isComingSoon = app.comingSoon;
+                    const appId = app.appId || (app as any).AppId;
+                    const appTitle = app.title || app.name || (app as any).Title || (app as any).Name || 'Applicazione';
+                    const isComingSoon = app.comingSoon || (app as any).ComingSoon;
+                    const appIcon = app.icon || (app as any).Icon || 'apps';
+                    const appDesc = app.description || (app as any).Description || '';
+
                     return (
-                      <div key={app.appId} className="col-12 col-md-6 col-lg-4">
+                      <div key={appId} className="col-12 col-md-6 col-lg-4">
                         <div 
                           onClick={() => handleAppLaunch(app)}
                           className="card app-card position-relative"
@@ -242,10 +262,10 @@ export default function Dashboard({ user }: DashboardProps) {
                                 color: isComingSoon ? '#64748b' : company.primaryColor 
                               }}
                             >
-                              <span className="material-icons">{app.icon || 'apps'}</span>
+                              <span className="material-icons">{appIcon}</span>
                             </div>
                             <h5 className="app-title">{appTitle}</h5>
-                            <p className="app-desc mb-4">{app.description}</p>
+                            <p className="app-desc mb-4">{appDesc}</p>
                             <span 
                               className="btn btn-sm mt-auto w-100 fw-semibold" 
                               style={isComingSoon ? {

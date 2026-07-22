@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Platform.Portal.Data;
 using Platform.Portal.Models;
 using Platform.Portal.Services;
 using System.Collections.Generic;
@@ -20,15 +22,18 @@ public class HomeController : ControllerBase
     private readonly IConfiguration _configuration;
     private readonly ILogger<HomeController> _logger;
     private readonly IPermissionService _permissionService;
+    private readonly ApplicationDbContext _context;
 
     public HomeController(
         IConfiguration configuration, 
         ILogger<HomeController> logger,
-        IPermissionService permissionService)
+        IPermissionService permissionService,
+        ApplicationDbContext context)
     {
         _configuration = configuration;
         _logger = logger;
         _permissionService = permissionService;
+        _context = context;
     }
 
     /// <summary>
@@ -73,5 +78,21 @@ public class HomeController : ControllerBase
         }
         
         return Ok(filteredCompanies);
+    }
+
+    /// <summary>
+    /// Restituisce le statistiche generali del sistema per la dashboard
+    /// </summary>
+    [HttpGet("Stats")]
+    public async Task<IActionResult> GetDashboardStats()
+    {
+        var activeUsers = await _context.Users.CountAsync(u => u.IsActive);
+        var completedChecklists = await _context.KioskChecklistInstances.CountAsync(i => i.Status == "Completed");
+
+        return Ok(new
+        {
+            activeUsers,
+            completedChecklists
+        });
     }
 }

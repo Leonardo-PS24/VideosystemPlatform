@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Platform.Portal.Data;
 using Platform.Shared.Models;
 using Platform.Shared.Services;
@@ -216,6 +216,127 @@ public class KioskService : IKioskService
             throw;
         }
         return false;
+    }
+
+    public async Task SubmitApprovalAsync(int instanceId, string userId)
+    {
+        try
+        {
+            var instance = await _context.KioskChecklistInstances.FindAsync(instanceId);
+            if (instance != null && instance.Status == "InRevision")
+            {
+                instance.Status = "PendingApproval";
+                instance.UpdatedBy = userId;
+                instance.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+                
+                await SafeLogHistoryAsync(instanceId, "SubmitApproval", instance.DataJson, "PendingApproval", userId, "Proposta inviata per approvazione all'Admin.");
+                await _hubContext.Clients.All.SendAsync("UpdateStatus", instanceId, "PendingApproval");
+                await _hubContext.Clients.Group($"checklist_{instanceId}").SendAsync("DataUpdated", userId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Errore durante submit-approval per {InstanceId}", instanceId);
+            throw;
+        }
+    }
+
+    public async Task RejectRevisionAsync(int instanceId, string userId)
+    {
+        try
+        {
+            var instance = await _context.KioskChecklistInstances.FindAsync(instanceId);
+            if (instance != null && (instance.Status == "InRevision" || instance.Status == "PendingApproval"))
+            {
+                var lastCompleted = await _context.KioskChecklistHistories
+                    .Where(h => h.InstanceId == instanceId && h.Status == "Completed")
+                    .OrderByDescending(h => h.Timestamp)
+                    .FirstOrDefaultAsync();
+
+                instance.DataJson = lastCompleted?.DataJson ?? instance.DataJson;
+                instance.Status = "Completed";
+                instance.Progress = 100;
+                instance.UpdatedBy = userId;
+                instance.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+
+                await SafeLogHistoryAsync(instanceId, "RevisionRejected", instance.DataJson, "Completed", userId, "Revisione rifiutata, ripristinata versione precedente.");
+                await _hubContext.Clients.All.SendAsync("UpdateStatus", instanceId, "Completed");
+                await _hubContext.Clients.Group($"checklist_{instanceId}").SendAsync("DataUpdated", userId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Errore durante il rifiuto della revisione {InstanceId}", instanceId);
+            throw;
+        }
+    }
+
+    public async Task<List<KioskChecklistDiff>> GetInstanceDiffAsync(int instanceId)
+    {
+        try
+        {
+            var instance = await _context.KioskChecklistInstances
+                .Include(i => i.Template)
+                .FirstOrDefaultAsync(i => i.Id == instanceId);
+            if (instance == null) return new List<KioskChecklistDiff>();
+
+            var lastCompleted = await _context.KioskChecklistHistories
+                .Where(h => h.InstanceId == instanceId && h.Status == "Completed")
+                .OrderByDescending(h => h.Timestamp)
+                .FirstOrDefaultAsync();
+
+            string oldJson = lastCompleted?.DataJson ?? "{}";
+            string newJson = instance.DataJson;
+
+            var oldData = JsonSerializer.Deserialize<Dictionary<string, object>>(oldJson) ?? new();
+            var newData = JsonSerializer.Deserialize<Dictionary<string, object>>(newJson) ?? new();
+
+            var structure = JsonSerializer.Deserialize<TemplateStructureDto>(instance.Template.StructureJson ?? "{\"sections\":[]}", new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var fieldMap = new Dictionary<string, TemplateFieldDto>();
+
+            if (structure?.Sections != null)
+            {
+                foreach (var sec in structure.Sections)
+                {
+                    if (sec.Fields != null)
+                    {
+                        foreach (var field in sec.Fields)
+                        {
+                            fieldMap[field.Id] = field;
+                        }
+                    }
+                }
+            }
+
+            var diffList = new List<KioskChecklistDiff>();
+            foreach (var key in newData.Keys)
+            {
+                if (key.StartsWith("_")) continue;
+                var oldValStr = oldData.ContainsKey(key) ? oldData[key]?.ToString() ?? "" : "";
+                var newValStr = newData[key]?.ToString() ?? "";
+
+                if (oldValStr != newValStr)
+                {
+                    fieldMap.TryGetValue(key, out var f);
+                    diffList.Add(new KioskChecklistDiff
+                    {
+                        FieldId = key,
+                        Label = f?.Label ?? key,
+                        OldValue = oldValStr,
+                        NewValue = newValStr
+                    });
+                }
+            }
+
+            return diffList;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Errore durante il calcolo del diff per {InstanceId}", instanceId);
+            return new List<KioskChecklistDiff>();
+        }
     }
 
     // ... (altri metodi invariati) ...

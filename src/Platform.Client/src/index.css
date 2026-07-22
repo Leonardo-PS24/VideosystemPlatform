@@ -49,7 +49,8 @@ body {
 .app-container {
   display: flex;
   min-height: 100vh;
-  width: 100vw;
+  width: 100%;
+  max-width: 100%;
   overflow: hidden;
 }
 
@@ -149,7 +150,7 @@ body {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  overflow: hidden;
   height: 100vh;
 }
 
@@ -161,11 +162,14 @@ body {
   justify-content: space-between;
   padding: 0 2rem;
   box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+  flex-shrink: 0;
 }
 
 .page-body {
   padding: 2rem;
   flex-grow: 1;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 /* Premium checklist elements */
@@ -274,4 +278,61 @@ body {
   font-size: 0.9rem;
   color: #666;
   flex-grow: 1;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.9; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-pulse {
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+/* Media query per tablet e mobile */
+@media (max-width: 991.98px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 1045;
+    height: 100vh;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .sidebar.show {
+    transform: translateX(0);
+    width: var(--sidebar-width) !important;
+  }
+  .sidebar.collapsed {
+    transform: translateX(-100%);
+    width: var(--sidebar-width) !important;
+  }
+  
+  /* Nascondi il toggle button in fondo alla sidebar su mobile */
+  .sidebar-footer {
+    display: none;
+  }
+
+  .sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.4);
+    z-index: 1040;
+    backdrop-filter: blur(2px);
+    transition: opacity 0.3s ease;
+  }
+  
+  .topbar {
+    padding: 0 1rem;
+  }
+  
+  .page-body {
+    padding: 1rem;
+  }
 }

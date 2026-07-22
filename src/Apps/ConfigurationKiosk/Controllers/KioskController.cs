@@ -14,12 +14,18 @@ public class KioskController : ControllerBase
 {
     private readonly IKioskService _kioskService;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IAdminAuthService _adminAuthService;
     private readonly ILogger<KioskController> _logger;
 
-    public KioskController(IKioskService kioskService, IAuthorizationService authorizationService, ILogger<KioskController> logger)
+    public KioskController(
+        IKioskService kioskService, 
+        IAuthorizationService authorizationService, 
+        IAdminAuthService adminAuthService,
+        ILogger<KioskController> logger)
     {
         _kioskService = kioskService;
         _authorizationService = authorizationService;
+        _adminAuthService = adminAuthService;
         _logger = logger;
     }
 
@@ -133,6 +139,61 @@ public class KioskController : ControllerBase
             history = history
         });
     }
+
+    [HttpPost("{id}/unlock-with-admin")]
+    public async Task<IActionResult> UnlockWithAdmin(int id, [FromBody] UnlockRequest request)
+    {
+        if (string.IsNullOrEmpty(request.Username) || string.IsNullOrEmpty(request.Password))
+        {
+            return BadRequest(new { message = "Username e password dell'amministratore sono richiesti." });
+        }
+
+        var isAuthorized = await _adminAuthService.VerifyAdminCredentialsAsync(request.Username, request.Password);
+        if (!isAuthorized)
+        {
+            return BadRequest(new { message = "Credenziali non valide o l'utente non è un amministratore." });
+        }
+
+        await _kioskService.StartRevisionAsync(id, request.Username);
+        return Ok(new { message = "Checklist sbloccata con successo." });
+    }
+
+    [HttpGet("{id}/diff")]
+    public async Task<IActionResult> GetDiff(int id)
+    {
+        var diff = await _kioskService.GetInstanceDiffAsync(id);
+        return Ok(diff);
+    }
+
+    [HttpPost("{id}/submit-approval")]
+    public async Task<IActionResult> SubmitApproval(int id)
+    {
+        var userId = User.Identity?.Name ?? "Unknown";
+        await _kioskService.SubmitApprovalAsync(id, userId);
+        return Ok();
+    }
+
+    [HttpPost("{id}/reject-revision")]
+    public async Task<IActionResult> RejectRevision(int id)
+    {
+        var userId = User.Identity?.Name ?? "Unknown";
+        await _kioskService.RejectRevisionAsync(id, userId);
+        return Ok();
+    }
+
+    [HttpPost("{id}/propose-revision")]
+    public async Task<IActionResult> ProposeRevision(int id)
+    {
+        var userId = User.Identity?.Name ?? "Unknown";
+        await _kioskService.StartRevisionAsync(id, userId);
+        return Ok();
+    }
+}
+
+public class UnlockRequest
+{
+    public string Username { get; set; } = "";
+    public string Password { get; set; } = "";
 }
 
 public class CreateRequest

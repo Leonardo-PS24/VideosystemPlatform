@@ -26,7 +26,7 @@ interface TemplateStructure {
 }
 
 interface InstanceData {
-  status: 'InProgress' | 'Completed' | 'InRevision' | 'Finalized';
+  status: 'InProgress' | 'Completed' | 'InRevision' | 'PendingApproval' | 'Finalized';
   machineSerialNumber: string;
   progress: number;
   revision: number;
@@ -37,7 +37,18 @@ interface InstanceData {
   };
 }
 
-export default function KioskCompile() {
+interface UserData {
+  username: string;
+  email: string;
+  fullName: string;
+  roles: string[];
+}
+
+interface KioskCompileProps {
+  user: UserData | null;
+}
+
+export default function KioskCompile({ user }: KioskCompileProps) {
   const { id } = useParams<{ id: string }>();
 
   const [loading, setLoading] = useState(true);
@@ -59,16 +70,26 @@ export default function KioskCompile() {
   const [touchedFields, setTouchedFields] = useState<string[]>([]);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved');
 
+  // proposed changes & admin auth modal states
+  const [diffList, setDiffList] = useState<any[]>([]);
+  const [showAdminModal, setShowAdminModal] = useState(false);
+  const [adminUsername, setAdminUsername] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [adminError, setAdminError] = useState('');
+  const [unlocking, setUnlocking] = useState(false);
+
   // Refs for debouncing
   const saveTimeoutRef = useRef<any>(null);
   const answersRef = useRef(answers);
   const touchedRef = useRef(touchedFields);
+  const activeSectionIdRef = useRef(activeSectionId);
 
   // Keep refs in sync for use in debounce and events
   useEffect(() => {
     answersRef.current = answers;
     touchedRef.current = touchedFields;
-  }, [answers, touchedFields]);
+    activeSectionIdRef.current = activeSectionId;
+  }, [answers, touchedFields, activeSectionId]);
 
   // Load Kiosk data from API
   const loadKioskData = async (showLoading = true) => {
@@ -84,8 +105,9 @@ export default function KioskCompile() {
       // Parse template structure
       const parsedStructure: TemplateStructure = JSON.parse(json.template.structureJson || '{"sections":[]}');
       setStructure(parsedStructure);
-      if (parsedStructure.sections.length > 0 && !activeSectionId) {
+      if (parsedStructure.sections.length > 0 && !activeSectionIdRef.current) {
         setActiveSectionId(parsedStructure.sections[0].id);
+        activeSectionIdRef.current = parsedStructure.sections[0].id;
       }
 
       // Parse current answers
@@ -175,6 +197,26 @@ export default function KioskCompile() {
       }
     };
   }, [id]);
+
+  const loadDiffData = async () => {
+    try {
+      const response = await fetch(`/api/Kiosk/${id}/diff`);
+      if (response.ok) {
+        const json = await response.json();
+        setDiffList(json);
+      }
+    } catch (err) {
+      console.error("Errore nel recupero delle differenze:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (instance && (instance.status === 'PendingApproval' || instance.status === 'InRevision')) {
+      loadDiffData();
+    } else {
+      setDiffList([]);
+    }
+  }, [instance?.status, id]);
 
   // Count total interactive fields
   const getTotalFields = (): { total: number; requiredKeys: string[] } => {
@@ -304,23 +346,7 @@ export default function KioskCompile() {
     }
   };
 
-  const handleStartRevision = async () => {
-    if (!window.confirm("Vuoi avviare la revisione di questa checklist? Diventerà modificabile.")) return;
-    try {
-      const response = await fetch('/api/Kiosk/start-revision', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ instanceId: Number(id) })
-      });
-      if (response.ok) {
-        loadKioskData();
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
+
 
   const handleFinalizeRevision = async () => {
     if (!window.confirm("Vuoi finalizzare la revisione e congelare la configurazione?")) return;
@@ -356,6 +382,103 @@ export default function KioskCompile() {
     }
   };
 
+  const handleProposeRevision = async () => {
+    if (!window.confirm("Vuoi avviare una proposta di modifica per questa checklist?")) return;
+    try {
+      const response = await fetch(`/api/Kiosk/${id}/propose-revision`, {
+        method: 'POST'
+      });
+      if (response.ok) {
+        loadKioskData();
+      } else {
+        alert("Errore nell'avvio della proposta di modifica.");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSubmitApproval = async () => {
+    if (!window.confirm("Vuoi inviare le modifiche proposte all'amministratore per l'approvazione?")) return;
+    try {
+      // Prima salviamo le risposte correnti
+      const { total } = getTotalFields();
+      const progressPercent = total > 0 ? Math.round((touchedFields.length / total) * 100) : 100;
+      const payload = {
+        instanceId: Number(id),
+        dataJson: JSON.stringify({
+          ...answers,
+          _touched: touchedFields,
+          _progressPercent: progressPercent
+        })
+      };
+      await fetch('/api/Kiosk/save', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      // Poi inviamo per approvazione
+      const response = await fetch(`/api/Kiosk/${id}/submit-approval`, {
+        method: 'POST'
+      });
+      if (response.ok) {
+        loadKioskData();
+      } else {
+        alert("Errore nell'invio per approvazione.");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleRejectRevision = async () => {
+    if (!window.confirm("Sei sicuro di voler rifiutare la proposta di modifica? Tutte le modifiche non approvate andranno perse.")) return;
+    try {
+      const response = await fetch(`/api/Kiosk/${id}/reject-revision`, {
+        method: 'POST'
+      });
+      if (response.ok) {
+        loadKioskData();
+      } else {
+        alert("Errore nel rifiuto delle modifiche.");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleUnlockWithAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminUsername.trim() || !adminPassword.trim()) {
+      setAdminError("Inserisci username e password.");
+      return;
+    }
+    setUnlocking(true);
+    setAdminError('');
+    try {
+      const response = await fetch(`/api/Kiosk/${id}/unlock-with-admin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: adminUsername.trim(), password: adminPassword.trim() })
+      });
+      if (response.ok) {
+        setShowAdminModal(false);
+        setAdminUsername('');
+        setAdminPassword('');
+        loadKioskData();
+      } else {
+        const errJson = await response.json();
+        setAdminError(errJson.message || "Credenziali non valide o autorizzazione negata.");
+      }
+    } catch (err) {
+      console.error(err);
+      setAdminError("Errore di connessione.");
+    } finally {
+      setUnlocking(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '300px' }}>
@@ -377,7 +500,7 @@ export default function KioskCompile() {
 
   const { total } = getTotalFields();
   const currentProgress = total > 0 ? Math.round((touchedFields.length / total) * 100) : 0;
-  const isLocked = instance.status === 'Completed' || instance.status === 'Finalized';
+  const isLocked = instance.status === 'Completed' || instance.status === 'Finalized' || instance.status === 'PendingApproval';
 
   return (
     <div>
@@ -414,10 +537,24 @@ export default function KioskCompile() {
         </div>
       </div>
 
+      {/* Navigazione Orizzontale Sezioni per Tablet/Mobile */}
+      <div className="d-md-none mb-3 overflow-auto flex-nowrap d-flex gap-2 pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        {structure.sections.map((sec) => (
+          <button
+            key={sec.id}
+            onClick={() => setActiveSectionId(sec.id)}
+            className={`btn btn-sm px-3 py-2 fw-bold text-nowrap rounded-pill ${activeSectionId === sec.id ? 'btn-primary text-white shadow-sm' : 'btn-white border text-dark bg-white'}`}
+            style={{ borderRadius: '20px' }}
+          >
+            {sec.title}
+          </button>
+        ))}
+      </div>
+
       <div className="row g-4">
         {/* Navigazione Sezioni */}
-        <div className="col-12 col-md-4 col-lg-3">
-          <div className="card border-0 shadow-sm bg-white overflow-hidden" style={{ borderRadius: '12px' }}>
+        <div className="col-12 col-md-4 col-lg-3 order-2 order-md-1">
+          <div className="card border-0 shadow-sm bg-white overflow-hidden d-none d-md-block" style={{ borderRadius: '12px' }}>
             <div className="p-3 bg-light border-bottom fw-bold text-dark small text-uppercase tracking-wider">
               Sezioni Checklist
             </div>
@@ -438,10 +575,10 @@ export default function KioskCompile() {
 
           {/* Azioni di stato compilazione */}
           <div className="mt-3">
-            {!isLocked && canEdit && (
+            {!isLocked && canEdit && instance.status === 'InProgress' && (
               <button 
                 onClick={handleComplete}
-                className="btn btn-success w-100 py-3 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2"
+                className="btn btn-success w-100 py-3 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2 mb-2"
                 style={{ borderRadius: '12px' }}
               >
                 <i className="bi bi-check-circle-fill"></i>
@@ -450,31 +587,121 @@ export default function KioskCompile() {
             )}
 
             {instance.status === 'Completed' && (
-              <button 
-                onClick={handleStartRevision}
-                className="btn btn-warning w-100 py-3 fw-bold text-dark shadow-sm d-flex align-items-center justify-content-center gap-2"
-                style={{ borderRadius: '12px' }}
-              >
-                <i className="bi bi-pencil-square"></i>
-                Richiedi Revisione (Admin)
-              </button>
+              <>
+                <button 
+                  onClick={() => setShowAdminModal(true)}
+                  className="btn btn-outline-danger w-100 py-2 fw-semibold mb-2 d-flex align-items-center justify-content-center gap-2"
+                  style={{ borderRadius: '12px', fontSize: '0.85rem' }}
+                >
+                  <i className="bi bi-shield-lock-fill"></i>
+                  Sblocca con Admin
+                </button>
+                <button 
+                  onClick={handleProposeRevision}
+                  className="btn btn-warning w-100 py-3 fw-bold text-dark shadow-sm d-flex align-items-center justify-content-center gap-2"
+                  style={{ borderRadius: '12px' }}
+                >
+                  <i className="bi bi-pencil-square"></i>
+                  Proponi Modifica
+                </button>
+              </>
             )}
 
             {instance.status === 'InRevision' && (
-              <button 
-                onClick={handleFinalizeRevision}
-                className="btn btn-primary w-100 py-3 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2"
-                style={{ borderRadius: '12px' }}
-              >
-                <i className="bi bi-file-earmark-check-fill"></i>
-                Finalizza Revisione (Admin)
-              </button>
+              user?.roles.includes('Admin') ? (
+                <button 
+                  onClick={handleFinalizeRevision}
+                  className="btn btn-primary w-100 py-3 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2"
+                  style={{ borderRadius: '12px' }}
+                >
+                  <i className="bi bi-file-earmark-check-fill"></i>
+                  Finalizza Revisione (Admin)
+                </button>
+              ) : (
+                <button 
+                  onClick={handleSubmitApproval}
+                  className="btn btn-success w-100 py-3 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2"
+                  style={{ borderRadius: '12px' }}
+                >
+                  <i className="bi bi-send-check-fill"></i>
+                  Invia per Approvazione
+                </button>
+              )
+            )}
+
+            {instance.status === 'PendingApproval' && (
+              user?.roles.includes('Admin') ? (
+                <div className="d-flex flex-column gap-2">
+                  <button 
+                    onClick={handleFinalizeRevision}
+                    className="btn btn-success w-100 py-3 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2"
+                    style={{ borderRadius: '12px' }}
+                  >
+                    <i className="bi bi-check-lg"></i>
+                    Approva Modifiche
+                  </button>
+                  <button 
+                    onClick={handleRejectRevision}
+                    className="btn btn-outline-danger w-100 py-2 fw-semibold d-flex align-items-center justify-content-center gap-2"
+                    style={{ borderRadius: '12px' }}
+                  >
+                    <i className="bi bi-x-lg"></i>
+                    Rifiuta Modifiche
+                  </button>
+                </div>
+              ) : (
+                <div className="alert alert-info text-center py-3 mb-0" style={{ borderRadius: '12px' }}>
+                  <i className="bi bi-clock-history fs-4 d-block mb-1"></i>
+                  <span className="small fw-semibold d-block">In Attesa di Approvazione</span>
+                  <span className="xsmall text-muted d-block" style={{ fontSize: '0.75rem' }}>Le modifiche sono state inviate all'amministratore.</span>
+                </div>
+              )
             )}
           </div>
         </div>
 
         {/* Campi Sezione Attiva */}
-        <div className="col-12 col-md-8 col-lg-9">
+        <div className="col-12 col-md-8 col-lg-9 order-1 order-md-2">
+          {user?.roles.includes('Admin') && diffList.length > 0 && (
+            <div className="card border-0 shadow-sm p-4 mb-4 bg-white" style={{ borderRadius: '16px', background: 'linear-gradient(180deg, #ffffff 0%, #fcfdfd 100%)', border: '1px solid #eef2f6' }}>
+              <div className="d-flex align-items-center justify-content-between mb-4 pb-2 border-bottom border-light">
+                <div className="d-flex align-items-center gap-2 text-warning">
+                  <i className="bi bi-git fs-4 text-warning"></i>
+                  <h5 className="fw-bold mb-0 text-dark" style={{ letterSpacing: '-0.3px' }}>Revisione Modifiche Proposte</h5>
+                </div>
+                <span className="badge bg-warning-subtle text-warning fw-bold px-3 py-1 rounded-pill" style={{ fontSize: '0.75rem' }}>
+                  {diffList.length} {diffList.length === 1 ? 'modifica rilevata' : 'modifiche rilevate'}
+                </span>
+              </div>
+              <div className="d-flex flex-column gap-3">
+                {diffList.map((d, idx) => {
+                  const formatVal = (val: string) => {
+                    if (val === 'True') return 'Sì';
+                    if (val === 'False') return 'No';
+                    return val || 'Vuoto';
+                  };
+                  return (
+                    <div key={idx} className="p-3 rounded-3 d-flex flex-wrap align-items-center justify-content-between gap-3 border border-light" style={{ backgroundColor: '#f8fafc' }}>
+                      <div className="d-flex align-items-center gap-2">
+                        <span className="badge bg-secondary-subtle text-secondary rounded-circle d-flex align-items-center justify-content-center" style={{ width: '24px', height: '24px', fontSize: '0.75rem' }}>{idx + 1}</span>
+                        <span className="fw-bold text-dark" style={{ fontSize: '0.9rem' }}>{d.label}</span>
+                      </div>
+                      <div className="d-flex align-items-center gap-2 flex-wrap">
+                        <span className="badge text-danger-emphasis bg-danger-subtle border border-danger-subtle px-3 py-2 rounded-pill font-monospace" style={{ fontSize: '0.8rem' }}>
+                          <del className="text-decoration-none">{formatVal(d.oldValue)}</del>
+                        </span>
+                        <i className="bi bi-arrow-right text-muted fs-5 mx-1"></i>
+                        <span className="badge text-success-emphasis bg-success-subtle border border-success-subtle px-3 py-2 rounded-pill font-monospace" style={{ fontSize: '0.8rem' }}>
+                          {formatVal(d.newValue)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {structure.sections
             .filter(s => s.id === activeSectionId)
             .map((sec) => (
@@ -665,6 +892,67 @@ export default function KioskCompile() {
                   )}
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modale Sblocco con credenziali Admin */}
+      {showAdminModal && (
+        <div className="modal-backdrop fade show" style={{ zIndex: 1040 }}></div>
+      )}
+      {showAdminModal && (
+        <div className="modal fade show d-block" style={{ zIndex: 1050 }} tabIndex={-1}>
+          <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: '400px' }}>
+            <div className="modal-content border-0 shadow-lg" style={{ borderRadius: '16px' }}>
+              <div className="modal-header border-bottom-0 pb-0 pt-3 px-3 d-flex align-items-center justify-content-between">
+                <h5 className="fw-bold text-dark mb-0">Sblocco con Admin</h5>
+                <button type="button" className="btn-close border-0 bg-transparent" onClick={() => { setShowAdminModal(false); setAdminError(''); }} style={{ fontSize: '1.2rem' }}>&times;</button>
+              </div>
+              <form onSubmit={handleUnlockWithAdmin}>
+                <div className="modal-body py-3 px-3">
+                  <p className="small text-muted mb-3">
+                    Inserisci le credenziali di un amministratore per sbloccare la checklist ed iniziare la revisione.
+                  </p>
+                  
+                  {adminError && (
+                    <div className="alert alert-danger py-2 px-3 small" role="alert">
+                      <i className="bi bi-exclamation-triangle-fill me-1"></i>
+                      {adminError}
+                    </div>
+                  )}
+
+                  <div className="mb-3">
+                    <label className="form-label small fw-bold text-muted mb-1">Username o Email</label>
+                    <input 
+                      type="text" 
+                      className="form-control form-control-sm" 
+                      value={adminUsername}
+                      onChange={(e) => setAdminUsername(e.target.value)}
+                      placeholder="admin@videosystem.it"
+                      required
+                    />
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label small fw-bold text-muted mb-1">Password</label>
+                    <input 
+                      type="password" 
+                      className="form-control form-control-sm" 
+                      value={adminPassword}
+                      onChange={(e) => setAdminPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="modal-footer border-top-0 pt-0 pb-3 px-3">
+                  <button type="button" className="btn btn-light btn-sm" onClick={() => { setShowAdminModal(false); setAdminError(''); }}>Annulla</button>
+                  <button type="submit" className="btn btn-danger btn-sm fw-bold px-3" disabled={unlocking}>
+                    {unlocking ? <span className="spinner-border spinner-border-sm me-1"></span> : null}
+                    Sblocca
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>

@@ -13,7 +13,7 @@ interface TemplateInfo {
 interface InstanceInfo {
   id: number;
   machineSerial: string;
-  status: 'Draft' | 'Completed' | 'UnderRevision' | 'Finalized';
+  status: 'Draft' | 'InProgress' | 'Completed' | 'InRevision' | 'UnderRevision' | 'PendingApproval' | 'Finalized';
   progress: number;
   createdAt: string;
   completedAt: string | null;
@@ -151,10 +151,15 @@ export default function KioskDashboard({ user }: KioskDashboardProps) {
     switch (status) {
       case 'Draft':
         return <span className="badge bg-warning text-dark">Bozza</span>;
+      case 'InProgress':
+        return <span className="badge bg-warning text-dark">In Corso</span>;
       case 'Completed':
         return <span className="badge bg-success">Completato</span>;
+      case 'InRevision':
       case 'UnderRevision':
         return <span className="badge bg-info text-dark">In Revisione</span>;
+      case 'PendingApproval':
+        return <span className="badge bg-danger">Attesa Approvazione</span>;
       case 'Finalized':
         return <span className="badge bg-primary">Finalizzato</span>;
       default:
@@ -213,52 +218,66 @@ export default function KioskDashboard({ user }: KioskDashboardProps) {
                       </td>
                     </tr>
                   ) : (
-                    data.recentInstances.map((ins) => (
-                      <tr key={ins.id}>
-                        <td className="fw-bold text-dark">{ins.machineSerial}</td>
-                        <td className="small text-muted">{ins.template.name}</td>
-                        <td style={{ width: '150px' }}>
-                          <div className="d-flex align-items-center gap-2">
-                            <div className="progress w-100" style={{ height: '6px' }}>
-                              <div 
-                                className={`progress-bar ${ins.status === 'Completed' || ins.status === 'Finalized' ? 'bg-success' : 'bg-warning'}`}
-                                style={{ width: `${ins.progress}%` }}
-                              ></div>
+                    data.recentInstances.map((ins) => {
+                      const isCompleted = ins.status === 'Completed' || ins.status === 'Finalized';
+                      const serial = ins.machineSerial || (ins as any).machineSerialNumber || (ins as any).MachineSerialNumber || (ins as any).MachineSerial || 'N/D';
+                      
+                      return (
+                        <tr 
+                          key={ins.id}
+                          onClick={() => navigate(`/kiosk/compile/${ins.id}`)}
+                          style={{ 
+                            cursor: 'pointer',
+                            backgroundColor: isCompleted ? '#eceff1' : 'transparent',
+                            opacity: isCompleted ? 0.7 : 1
+                          }}
+                          className={isCompleted ? 'text-muted' : ''}
+                        >
+                          <td className="fw-bold text-dark">{serial}</td>
+                          <td className="small text-muted">{ins.template.name}</td>
+                          <td style={{ width: '150px' }}>
+                            <div className="d-flex align-items-center gap-2">
+                              <div className="progress w-100" style={{ height: '6px' }}>
+                                <div 
+                                  className={`progress-bar ${isCompleted ? 'bg-success' : 'bg-warning'}`}
+                                  style={{ width: `${ins.progress}%` }}
+                                ></div>
+                              </div>
+                              <span className="small fw-semibold">{ins.progress}%</span>
                             </div>
-                            <span className="small fw-semibold">{ins.progress}%</span>
-                          </div>
-                        </td>
-                        <td>{getStatusBadge(ins.status)}</td>
-                        <td className="small text-muted">{new Date(ins.createdAt).toLocaleString()}</td>
-                        <td className="text-end">
-                          <div className="btn-group btn-group-sm">
-                            <button 
-                              onClick={() => navigate(`/kiosk/compile/${ins.id}`)}
-                              className="btn btn-outline-primary"
-                              title="Visualizza/Compila"
-                            >
-                              <i className="bi bi-pencil-square"></i>
-                            </button>
-                            <button 
-                              onClick={() => navigate(`/kiosk/history/${ins.id}`)}
-                              className="btn btn-outline-info"
-                              title="Storico Revisioni"
-                            >
-                              <i className="bi bi-clock-history"></i>
-                            </button>
-                            {data.canDelete && (
+                          </td>
+                          <td>{getStatusBadge(ins.status)}</td>
+                          <td className="small text-muted">{new Date(ins.createdAt).toLocaleString()}</td>
+                          <td className="text-end">
+                            <div className="btn-group btn-group-sm" onClick={(e) => e.stopPropagation()}>
                               <button 
-                                onClick={() => handleDelete(ins.id)}
-                                className="btn btn-outline-danger"
-                                title="Elimina"
+                                onClick={() => navigate(`/kiosk/compile/${ins.id}`)}
+                                className="btn btn-outline-primary"
+                                title="Visualizza/Compila"
                               >
-                                <i className="bi bi-trash"></i>
+                                <i className="bi bi-pencil-square"></i>
                               </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                              <button 
+                                onClick={() => navigate(`/kiosk/history/${ins.id}`)}
+                                className="btn btn-outline-info"
+                                title="Storico Revisioni"
+                              >
+                                <i className="bi bi-clock-history"></i>
+                              </button>
+                              {data.canDelete && (
+                                <button 
+                                  onClick={() => handleDelete(ins.id)}
+                                  className="btn btn-outline-danger"
+                                  title="Elimina"
+                                >
+                                  <i className="bi bi-trash"></i>
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>

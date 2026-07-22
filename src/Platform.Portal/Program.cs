@@ -68,6 +68,7 @@ builder.Services.AddAuthentication()
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IKioskService, KioskService>();
+builder.Services.AddScoped<IAdminAuthService, AdminAuthService>();
 
 // Registra l'handler di autorizzazione
 builder.Services.AddSingleton<IAuthorizationHandler, PermissionHandler>();
