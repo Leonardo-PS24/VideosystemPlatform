@@ -91,6 +91,8 @@ export default function Dashboard({ user }: DashboardProps) {
 
     if (appId === 'ConfigurationKiosk' || appId === 'kiosk') {
       navigate('/kiosk');
+    } else if (appId === 'SkriptkioskChecklist') {
+      navigate('/skriptkiosk');
     } else if (url) {
       window.open(url, '_blank');
     }

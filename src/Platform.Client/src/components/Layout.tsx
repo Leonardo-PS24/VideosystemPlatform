@@ -12,6 +12,28 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
+const getInitials = (fullName: string | undefined, username: string | undefined): string => {
+  if (fullName) {
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    if (parts.length === 1 && parts[0].length > 0) {
+      return parts[0].substring(0, 2).toUpperCase();
+    }
+  }
+  if (username) {
+    const parts = username.trim().split('.');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    if (parts.length === 1 && parts[0].length > 0) {
+      return parts[0].substring(0, 2).toUpperCase();
+    }
+  }
+  return 'US';
+};
+
 export default function Layout({ user, onLogout, children }: LayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -57,6 +79,8 @@ export default function Layout({ user, onLogout, children }: LayoutProps) {
     const path = location.pathname;
     if (path.startsWith('/kiosk/')) {
       navigate('/kiosk');
+    } else if (path.startsWith('/skriptkiosk/')) {
+      navigate('/skriptkiosk');
     } else {
       navigate('/');
     }
@@ -72,6 +96,9 @@ export default function Layout({ user, onLogout, children }: LayoutProps) {
     if (path === '/kiosk') return 'Kiosk Checklist';
     if (path.startsWith('/kiosk/compile/')) return 'Compila Checklist';
     if (path.startsWith('/kiosk/history/')) return 'Storico Checklist';
+    if (path === '/skriptkiosk') return 'Kiosk Checklist (SkriptKiosk)';
+    if (path.startsWith('/skriptkiosk/compile/')) return 'Compila Checklist (SkriptKiosk)';
+    if (path.startsWith('/skriptkiosk/history/')) return 'Storico Checklist (SkriptKiosk)';
     if (path === '/admin/users') return 'Gestione Utenti';
     if (path === '/admin/permissions') return 'Gestione Permessi';
     if (path === '/developer/tools') return 'Strumenti Dev';
@@ -306,7 +333,7 @@ export default function Layout({ user, onLogout, children }: LayoutProps) {
                     fontSize: '0.8rem'
                   }}
                 >
-                  {user?.fullName?.substring(0, 2).toUpperCase() || user?.username?.substring(0, 2).toUpperCase() || 'US'}
+                  {getInitials(user?.fullName, user?.username)}
                 </div>
                 <div className="text-start d-none d-lg-block" style={{ lineHeight: '1.2' }}>
                   <div className="fw-semibold text-dark small">{user?.fullName || user?.username}</div>
@@ -331,7 +358,7 @@ export default function Layout({ user, onLogout, children }: LayoutProps) {
                         fontSize: '1.2rem'
                       }}
                     >
-                      {user?.fullName?.substring(0, 2).toUpperCase() || user?.username?.substring(0, 2).toUpperCase() || 'US'}
+                      {getInitials(user?.fullName, user?.username)}
                     </div>
                     <h6 className="fw-bold text-dark mb-0">{user?.fullName || user?.username}</h6>
                     <span className="small text-muted d-block">{user?.email}</span>

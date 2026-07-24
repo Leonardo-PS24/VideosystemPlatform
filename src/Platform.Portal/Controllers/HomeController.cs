@@ -54,6 +54,12 @@ public class HomeController : ControllerBase
         var filteredCompanies = new List<CompanyInfo>();
         foreach (var company in companies)
         {
+            var hasCompanyAccess = await _permissionService.HasPermissionAsync(userId, $"Company_{company.Id}", PermissionType.View);
+            if (!hasCompanyAccess)
+            {
+                continue;
+            }
+
             var filteredApps = new List<ApplicationInfo>();
             foreach (var app in company.Applications)
             {

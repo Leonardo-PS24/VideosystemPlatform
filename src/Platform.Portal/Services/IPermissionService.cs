@@ -92,4 +92,14 @@ public interface IPermissionService
     /// Ottiene tutti i ruoli disponibili nel sistema
     /// </summary>
     Task<List<string>> GetAllRolesAsync();
+
+    /// <summary>
+    /// Crea un nuovo ruolo personalizzato nel sistema
+    /// </summary>
+    Task<bool> CreateRoleAsync(string roleName, string? description = null);
+
+    /// <summary>
+    /// Elimina un ruolo personalizzato dal sistema
+    /// </summary>
+    Task<bool> DeleteRoleAsync(string roleName);
 }

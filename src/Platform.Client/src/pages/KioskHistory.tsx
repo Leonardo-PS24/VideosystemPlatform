@@ -19,8 +19,14 @@ interface InstanceInfo {
   };
 }
 
-export default function KioskHistory() {
+interface KioskHistoryProps {
+  companyId: 'Pharmaself24' | 'Skriptkiosk';
+}
+
+export default function KioskHistory({ companyId }: KioskHistoryProps) {
   const { id } = useParams<{ id: string }>();
+
+  const apiPath = companyId === 'Skriptkiosk' ? '/api/SkriptKiosk' : '/api/Kiosk';
 
   const [instance, setInstance] = useState<InstanceInfo | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -84,7 +90,7 @@ export default function KioskHistory() {
   };
 
   useEffect(() => {
-    fetch(`/api/Kiosk/${id}/history`)
+    fetch(`${apiPath}/${id}/history`)
       .then((res) => {
         if (!res.ok) throw new Error('Errore nel caricamento della cronologia.');
         return res.json();

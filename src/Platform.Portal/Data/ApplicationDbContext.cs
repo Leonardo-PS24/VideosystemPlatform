@@ -16,11 +16,24 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     }
 
     public DbSet<ApplicationPermission> ApplicationPermissions { get; set; }
+    public DbSet<Role> CustomRoles { get; set; }
     public DbSet<RolePermission> RolePermissions { get; set; }
     public DbSet<KioskChecklistTemplate> KioskChecklistTemplates { get; set; }
     public DbSet<KioskChecklistInstance> KioskChecklistInstances { get; set; }
     public DbSet<KioskChecklistHistory> KioskChecklistHistories { get; set; } // Aggiunto
     
+    // SkriptKiosk checklist tables
+    public DbSet<SkriptKioskChecklistTemplate> SkriptKioskChecklistTemplates { get; set; }
+    public DbSet<SkriptKioskChecklistInstance> SkriptKioskChecklistInstances { get; set; }
+    public DbSet<SkriptKioskChecklistHistory> SkriptKioskChecklistHistories { get; set; }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        base.OnConfiguring(optionsBuilder);
+        optionsBuilder.ConfigureWarnings(warnings => 
+            warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+    }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

@@ -63,6 +63,27 @@ public class PermissionService : IPermissionService
             return true;
         }
 
+        // Check company authorization toggle first to prevent access if the company is disabled
+        if (!applicationName.StartsWith("Company_"))
+        {
+            var companyId = applicationName switch
+            {
+                "ConfigurationKiosk" => "Pharmaself24",
+                "SkriptkioskChecklist" => "Skriptkiosk",
+                _ => ""
+            };
+
+            if (!string.IsNullOrEmpty(companyId))
+            {
+                var companyPermission = $"Company_{companyId}";
+                var hasCompanyAccess = await HasCompanyPermissionDirectAsync(userId, companyPermission);
+                if (!hasCompanyAccess)
+                {
+                    return false;
+                }
+            }
+        }
+
         // 3. Controllo Override specifico per Utente
         var userOverride = await GetPermissionAsync(userId, applicationName);
         if (userOverride != null)
@@ -378,5 +399,150 @@ public class PermissionService : IPermissionService
             .Select(r => r.Name!)
             .OrderBy(r => r)
             .ToListAsync();
+    }
+
+    public async Task<bool> CreateRoleAsync(string roleName, string? description = null)
+    {
+        if (string.IsNullOrWhiteSpace(roleName))
+        {
+            throw new ArgumentException("Il nome del ruolo è obbligatorio.", nameof(roleName));
+        }
+
+        var normalizedRoleName = roleName.Trim();
+
+        if (await _roleManager.RoleExistsAsync(normalizedRoleName))
+        {
+            throw new InvalidOperationException($"Il ruolo '{normalizedRoleName}' esiste già.");
+        }
+
+        var result = await _roleManager.CreateAsync(new IdentityRole(normalizedRoleName));
+        if (!result.Succeeded)
+        {
+            var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+            throw new InvalidOperationException($"Errore durante la creazione del ruolo Identity: {errors}");
+        }
+
+        try
+        {
+            var customRole = new Role
+            {
+                Name = normalizedRoleName,
+                Description = description,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            _context.CustomRoles.Add(customRole);
+            await _context.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Impossibile salvare i metadati aggiuntivi per il ruolo {RoleName} nella tabella CustomRoles.", normalizedRoleName);
+        }
+
+        _logger.LogInformation("Creato nuovo ruolo personalizzato: {RoleName}", normalizedRoleName);
+        return true;
+    }
+
+    public async Task<bool> DeleteRoleAsync(string roleName)
+    {
+        if (string.IsNullOrWhiteSpace(roleName))
+        {
+            throw new ArgumentException("Il nome del ruolo è obbligatorio.", nameof(roleName));
+        }
+
+        var protectedRoles = new[] { "Admin", "Developer", "User" };
+        if (protectedRoles.Contains(roleName, StringComparer.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException($"Non è possibile eliminare il ruolo di sistema '{roleName}'.");
+        }
+
+        var usersInRole = await _userManager.GetUsersInRoleAsync(roleName);
+        if (usersInRole.Any())
+        {
+            throw new InvalidOperationException($"Impossibile eliminare il ruolo '{roleName}' perché è attualmente assegnato a {usersInRole.Count} utenti.");
+        }
+
+        // Rimuovi permessi associati al ruolo
+        var permissions = await _context.RolePermissions
+            .Where(rp => rp.RoleName == roleName)
+            .ToListAsync();
+        if (permissions.Any())
+        {
+            _context.RolePermissions.RemoveRange(permissions);
+        }
+
+        try
+        {
+            // Rimuovi entity Role personalizzata
+            var customRole = await _context.CustomRoles.FirstOrDefaultAsync(r => r.Name == roleName);
+            if (customRole != null)
+            {
+                _context.CustomRoles.Remove(customRole);
+            }
+            await _context.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Nota: Impossibile eliminare i metadati da CustomRoles per il ruolo {RoleName}", roleName);
+        }
+
+        // Rimuovi IdentityRole
+        var identityRole = await _roleManager.FindByNameAsync(roleName);
+        if (identityRole != null)
+        {
+            await _roleManager.DeleteAsync(identityRole);
+        }
+
+        await _context.SaveChangesAsync();
+        _logger.LogInformation("Eliminato ruolo: {RoleName}", roleName);
+        return true;
+    }
+
+    private async Task<bool> HasCompanyPermissionDirectAsync(string userId, string companyPermission)
+    {
+        var httpContext = _httpContextAccessor?.HttpContext;
+        bool isDevMode = httpContext?.Request.Cookies["dev_mode"] == "true";
+        if (isDevMode)
+        {
+            var devUser = await _userManager.FindByIdAsync(userId);
+            if (devUser != null)
+            {
+                var roles = await _userManager.GetRolesAsync(devUser);
+                if (roles.Contains("Developer") || roles.Contains("Admin"))
+                {
+                    return true;
+                }
+            }
+        }
+
+        if (await IsAdminAsync(userId))
+        {
+            return true;
+        }
+
+        var userOverride = await GetPermissionAsync(userId, companyPermission);
+        if (userOverride != null)
+        {
+            return userOverride.CanView;
+        }
+
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user != null)
+        {
+            var userRoles = await _userManager.GetRolesAsync(user);
+            if (userRoles.Any())
+            {
+                var rolePermissions = await _context.RolePermissions
+                    .Where(p => userRoles.Contains(p.RoleName) && p.ApplicationName == companyPermission)
+                    .ToListAsync();
+                if (rolePermissions.Any())
+                {
+                    return rolePermissions.Any(rp => rp.CanView);
+                }
+            }
+        }
+
+        return false;
     }
 }

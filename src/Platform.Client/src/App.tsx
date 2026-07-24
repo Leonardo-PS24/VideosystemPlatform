@@ -152,9 +152,15 @@ export default function App() {
       <Layout user={user} onLogout={handleLogout}>
         <Routes>
           <Route path="/" element={<Dashboard user={user} />} />
-          <Route path="/kiosk" element={<KioskDashboard user={user} />} />
-          <Route path="/kiosk/compile/:id" element={<KioskCompile user={user} />} />
-          <Route path="/kiosk/history/:id" element={<KioskHistory />} />
+          {/* Pharmaself24 Kiosk routes */}
+          <Route path="/kiosk" element={<KioskDashboard user={user} companyId="Pharmaself24" />} />
+          <Route path="/kiosk/compile/:id" element={<KioskCompile user={user} companyId="Pharmaself24" />} />
+          <Route path="/kiosk/history/:id" element={<KioskHistory companyId="Pharmaself24" />} />
+
+          {/* Skriptkiosk Kiosk routes */}
+          <Route path="/skriptkiosk" element={<KioskDashboard user={user} companyId="Skriptkiosk" />} />
+          <Route path="/skriptkiosk/compile/:id" element={<KioskCompile user={user} companyId="Skriptkiosk" />} />
+          <Route path="/skriptkiosk/history/:id" element={<KioskHistory companyId="Skriptkiosk" />} />
           <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/admin/permissions" element={<AdminPermissions />} />
           <Route path="/developer/tools" element={<DeveloperTools />} />

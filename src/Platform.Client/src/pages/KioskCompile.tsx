@@ -46,9 +46,10 @@ interface UserData {
 
 interface KioskCompileProps {
   user: UserData | null;
+  companyId: 'Pharmaself24' | 'Skriptkiosk';
 }
 
-export default function KioskCompile({ user }: KioskCompileProps) {
+export default function KioskCompile({ user, companyId }: KioskCompileProps) {
   const { id } = useParams<{ id: string }>();
 
   const [loading, setLoading] = useState(true);
@@ -91,11 +92,14 @@ export default function KioskCompile({ user }: KioskCompileProps) {
     activeSectionIdRef.current = activeSectionId;
   }, [answers, touchedFields, activeSectionId]);
 
+  const basePath = companyId === 'Skriptkiosk' ? '/skriptkiosk' : '/kiosk';
+  const apiPath = companyId === 'Skriptkiosk' ? '/api/SkriptKiosk' : '/api/Kiosk';
+
   // Load Kiosk data from API
   const loadKioskData = async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
-      const response = await fetch(`/api/Kiosk/${id}`);
+      const response = await fetch(`${apiPath}/${id}`);
       if (!response.ok) throw new Error("Errore nel recupero della checklist.");
       const json = await response.json();
       
@@ -200,7 +204,7 @@ export default function KioskCompile({ user }: KioskCompileProps) {
 
   const loadDiffData = async () => {
     try {
-      const response = await fetch(`/api/Kiosk/${id}/diff`);
+      const response = await fetch(`${apiPath}/${id}/diff`);
       if (response.ok) {
         const json = await response.json();
         setDiffList(json);
@@ -276,7 +280,7 @@ export default function KioskCompile({ user }: KioskCompileProps) {
       };
 
       try {
-        const response = await fetch('/api/Kiosk/save', {
+        const response = await fetch(`${apiPath}/save`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json'
@@ -328,7 +332,7 @@ export default function KioskCompile({ user }: KioskCompileProps) {
         })
       };
 
-      const response = await fetch('/api/Kiosk/complete', {
+      const response = await fetch(`${apiPath}/complete`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'
@@ -360,7 +364,7 @@ export default function KioskCompile({ user }: KioskCompileProps) {
         })
       };
 
-      const response = await fetch('/api/Kiosk/finalize-revision', {
+      const response = await fetch(`${apiPath}/finalize-revision`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'
@@ -385,7 +389,7 @@ export default function KioskCompile({ user }: KioskCompileProps) {
   const handleProposeRevision = async () => {
     if (!window.confirm("Vuoi avviare una proposta di modifica per questa checklist?")) return;
     try {
-      const response = await fetch(`/api/Kiosk/${id}/propose-revision`, {
+      const response = await fetch(`${apiPath}/${id}/propose-revision`, {
         method: 'POST'
       });
       if (response.ok) {
@@ -412,14 +416,14 @@ export default function KioskCompile({ user }: KioskCompileProps) {
           _progressPercent: progressPercent
         })
       };
-      await fetch('/api/Kiosk/save', {
+      await fetch(`${apiPath}/save`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
       // Poi inviamo per approvazione
-      const response = await fetch(`/api/Kiosk/${id}/submit-approval`, {
+      const response = await fetch(`${apiPath}/${id}/submit-approval`, {
         method: 'POST'
       });
       if (response.ok) {
@@ -435,7 +439,7 @@ export default function KioskCompile({ user }: KioskCompileProps) {
   const handleRejectRevision = async () => {
     if (!window.confirm("Sei sicuro di voler rifiutare la proposta di modifica? Tutte le modifiche non approvate andranno perse.")) return;
     try {
-      const response = await fetch(`/api/Kiosk/${id}/reject-revision`, {
+      const response = await fetch(`${apiPath}/${id}/reject-revision`, {
         method: 'POST'
       });
       if (response.ok) {
@@ -457,7 +461,7 @@ export default function KioskCompile({ user }: KioskCompileProps) {
     setUnlocking(true);
     setAdminError('');
     try {
-      const response = await fetch(`/api/Kiosk/${id}/unlock-with-admin`, {
+      const response = await fetch(`${apiPath}/${id}/unlock-with-admin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: adminUsername.trim(), password: adminPassword.trim() })

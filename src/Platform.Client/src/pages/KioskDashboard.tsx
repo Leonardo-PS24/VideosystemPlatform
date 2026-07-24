@@ -31,9 +31,10 @@ interface UserData {
 
 interface KioskDashboardProps {
   user: UserData | null;
+  companyId: 'Pharmaself24' | 'Skriptkiosk';
 }
 
-export default function KioskDashboard({ user }: KioskDashboardProps) {
+export default function KioskDashboard({ user, companyId }: KioskDashboardProps) {
   const [data, setData] = useState<{
     canCreate: boolean;
     canDelete: boolean;
@@ -48,10 +49,13 @@ export default function KioskDashboard({ user }: KioskDashboardProps) {
   const [serialNumber, setSerialNumber] = useState('');
   const [creating, setCreating] = useState(false);
 
+  const basePath = companyId === 'Skriptkiosk' ? '/skriptkiosk' : '/kiosk';
+  const apiPath = companyId === 'Skriptkiosk' ? '/api/SkriptKiosk' : '/api/Kiosk';
+
   const navigate = useNavigate();
 
   const loadData = () => {
-    fetch('/api/Kiosk')
+    fetch(apiPath)
       .then((res) => {
         if (!res.ok) throw new Error('Errore nel caricamento dei dati.');
         return res.json();
@@ -104,7 +108,7 @@ export default function KioskDashboard({ user }: KioskDashboardProps) {
 
     setCreating(true);
     try {
-      const response = await fetch('/api/Kiosk', {
+      const response = await fetch(apiPath, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -117,7 +121,7 @@ export default function KioskDashboard({ user }: KioskDashboardProps) {
 
       if (response.ok) {
         const instance = await response.json();
-        navigate(`/kiosk/compile/${instance.id}`);
+        navigate(`${basePath}/compile/${instance.id}`);
       } else {
         alert('Errore nella creazione della checklist.');
       }
@@ -133,7 +137,7 @@ export default function KioskDashboard({ user }: KioskDashboardProps) {
     if (!window.confirm('Sei sicuro di voler eliminare questa compilazione?')) return;
 
     try {
-      const response = await fetch(`/api/Kiosk/${id}`, {
+      const response = await fetch(`${apiPath}/${id}`, {
         method: 'DELETE',
       });
 
@@ -189,7 +193,7 @@ export default function KioskDashboard({ user }: KioskDashboardProps) {
   return (
     <div className="d-flex flex-column gap-4">
       {user?.roles.includes('Admin') && (
-        <KioskTemplates />
+        <KioskTemplates companyId={companyId} />
       )}
 
       <div className="row g-4">
@@ -225,7 +229,7 @@ export default function KioskDashboard({ user }: KioskDashboardProps) {
                       return (
                         <tr 
                           key={ins.id}
-                          onClick={() => navigate(`/kiosk/compile/${ins.id}`)}
+                          onClick={() => navigate(`${basePath}/compile/${ins.id}`)}
                           style={{ 
                             cursor: 'pointer',
                             backgroundColor: isCompleted ? '#eceff1' : 'transparent',
@@ -251,14 +255,14 @@ export default function KioskDashboard({ user }: KioskDashboardProps) {
                           <td className="text-end">
                             <div className="btn-group btn-group-sm" onClick={(e) => e.stopPropagation()}>
                               <button 
-                                onClick={() => navigate(`/kiosk/compile/${ins.id}`)}
+                                onClick={() => navigate(`${basePath}/compile/${ins.id}`)}
                                 className="btn btn-outline-primary"
                                 title="Visualizza/Compila"
                               >
                                 <i className="bi bi-pencil-square"></i>
                               </button>
                               <button 
-                                onClick={() => navigate(`/kiosk/history/${ins.id}`)}
+                                onClick={() => navigate(`${basePath}/history/${ins.id}`)}
                                 className="btn btn-outline-info"
                                 title="Storico Revisioni"
                               >

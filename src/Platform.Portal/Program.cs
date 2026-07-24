@@ -68,6 +68,7 @@ builder.Services.AddAuthentication()
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IKioskService, KioskService>();
+builder.Services.AddScoped<ISkriptKioskService, SkriptKioskService>();
 builder.Services.AddScoped<IAdminAuthService, AdminAuthService>();
 
 // Registra l'handler di autorizzazione
@@ -79,6 +80,10 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("Kiosk.Create", policy => policy.Requirements.Add(new PermissionRequirement("ConfigurationKiosk.Create")));
     options.AddPolicy("Kiosk.Edit", policy => policy.Requirements.Add(new PermissionRequirement("ConfigurationKiosk.Edit")));
     options.AddPolicy("Kiosk.Delete", policy => policy.Requirements.Add(new PermissionRequirement("ConfigurationKiosk.Delete")));
+    
+    options.AddPolicy("SkriptKiosk.Create", policy => policy.Requirements.Add(new PermissionRequirement("SkriptkioskChecklist.Create")));
+    options.AddPolicy("SkriptKiosk.Edit", policy => policy.Requirements.Add(new PermissionRequirement("SkriptkioskChecklist.Edit")));
+    options.AddPolicy("SkriptKiosk.Delete", policy => policy.Requirements.Add(new PermissionRequirement("SkriptkioskChecklist.Delete")));
 });
 
 // Configura le impostazioni

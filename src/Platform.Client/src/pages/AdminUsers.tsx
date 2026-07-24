@@ -101,6 +101,27 @@ export default function AdminUsers() {
     setFormSuccess(null);
     setShowModal(true);
   };
+ 
+   const handleFullNameChange = (val: string) => {
+     setFullName(val);
+     if (modalMode === 'create') {
+       const suggestedUsername = val
+         .toLowerCase()
+         .normalize('NFD')
+         .replace(/[\u0300-\u036f]/g, '')
+         .replace(/[^a-z0-9\s.-]/g, '')
+         .trim()
+         .replace(/\s+/g, '.');
+       setUsername(suggestedUsername);
+       
+       // Opzionale: suggerisci anche l'email aziendale se possibile
+       if (suggestedUsername) {
+         setEmail(`${suggestedUsername}@videosystem.it`);
+       } else {
+         setEmail('');
+       }
+     }
+   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -310,8 +331,9 @@ export default function AdminUsers() {
                       type="text"
                       className="form-control"
                       value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
+                      onChange={(e) => handleFullNameChange(e.target.value)}
                       placeholder="Mario Rossi"
+                      autoComplete="off"
                       required
                     />
                   </div>
@@ -324,6 +346,7 @@ export default function AdminUsers() {
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       placeholder="mario.rossi"
+                      autoComplete="off"
                       required
                     />
                   </div>
@@ -336,6 +359,7 @@ export default function AdminUsers() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="mario.rossi@videosystem.it"
+                      autoComplete="off"
                       required
                     />
                   </div>
@@ -382,6 +406,7 @@ export default function AdminUsers() {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="••••••••"
+                        autoComplete="new-password"
                       />
                     </div>
                     
@@ -393,6 +418,7 @@ export default function AdminUsers() {
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         placeholder="••••••••"
+                        autoComplete="new-password"
                       />
                     </div>
                   </div>

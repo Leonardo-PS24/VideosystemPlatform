@@ -360,6 +360,55 @@ public class PermissionsController : ControllerBase
             return BadRequest(new { message = "Errore nel salvataggio dei permessi del ruolo" });
         }
     }
+
+    /// <summary>
+    /// Crea un nuovo ruolo personalizzato
+    /// </summary>
+    [HttpPost("CreateRole")]
+    public async Task<IActionResult> CreateRole([FromBody] CreateRoleRequest request)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(request.RoleName))
+            {
+                return BadRequest(new { message = "Il nome del ruolo è obbligatorio." });
+            }
+
+            await _permissionService.CreateRoleAsync(request.RoleName, request.Description);
+            return Ok(new { message = $"Ruolo '{request.RoleName}' creato con successo." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating role {RoleName}", request.RoleName);
+            return StatusCode(500, new { message = "Errore durante la creazione del ruolo." });
+        }
+    }
+
+    /// <summary>
+    /// Elimina un ruolo personalizzato
+    /// </summary>
+    [HttpDelete("Role/{roleName}")]
+    public async Task<IActionResult> DeleteRole(string roleName)
+    {
+        try
+        {
+            await _permissionService.DeleteRoleAsync(roleName);
+            return Ok(new { message = $"Ruolo '{roleName}' eliminato con successo." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting role {RoleName}", roleName);
+            return StatusCode(500, new { message = "Errore durante l'eliminazione del ruolo." });
+        }
+    }
 }
 
 public class SaveRolePermissionsDto
@@ -377,4 +426,10 @@ public class TogglePermissionRequest
 public class DeletePermissionsRequest
 {
     public string UserId { get; set; } = string.Empty;
+}
+
+public class CreateRoleRequest
+{
+    public string RoleName { get; set; } = string.Empty;
+    public string? Description { get; set; }
 }

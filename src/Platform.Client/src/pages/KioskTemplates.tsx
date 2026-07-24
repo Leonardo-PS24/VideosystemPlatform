@@ -10,7 +10,11 @@ interface TemplateItem {
   createdAt: string;
 }
 
-export default function KioskTemplates() {
+interface KioskTemplatesProps {
+  companyId: 'Pharmaself24' | 'Skriptkiosk';
+}
+
+export default function KioskTemplates({ companyId }: KioskTemplatesProps) {
   const [templates, setTemplates] = useState<TemplateItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,8 +32,10 @@ export default function KioskTemplates() {
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const apiPath = companyId === 'Skriptkiosk' ? '/api/SkriptKioskAdmin' : '/api/KioskAdmin';
+
   const fetchTemplates = () => {
-    fetch('/api/KioskAdmin')
+    fetch(apiPath)
       .then((res) => {
         if (!res.ok) throw new Error('Errore nel caricamento dei template.');
         return res.json();
@@ -94,7 +100,7 @@ export default function KioskTemplates() {
 
     setSubmitting(true);
     try {
-      const response = await fetch('/api/KioskAdmin', {
+      const response = await fetch(apiPath, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -127,7 +133,7 @@ export default function KioskTemplates() {
 
   const handleToggleStatus = async (id: number) => {
     try {
-      const response = await fetch(`/api/KioskAdmin/${id}/toggle-status`, {
+      const response = await fetch(`${apiPath}/${id}/toggle-status`, {
         method: 'POST',
       });
       if (response.ok) {
@@ -144,7 +150,7 @@ export default function KioskTemplates() {
     if (!window.confirm(`Sei sicuro di voler eliminare definitivamente il template "${name}"?`)) return;
 
     try {
-      const response = await fetch(`/api/KioskAdmin/${id}`, {
+      const response = await fetch(`${apiPath}/${id}`, {
         method: 'DELETE',
       });
 
