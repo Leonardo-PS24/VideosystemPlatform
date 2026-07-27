@@ -2,248 +2,61 @@
 
 ## Architettura Implementata
 
-### Pattern: Portal + Microservices
+### Pattern: Portal + Microservices (SPA + Web API C#)
 
-La piattaforma è stata progettata con un'architettura modulare che separa:
+La piattaforma adotta una struttura modulare che separa nettamente la presentazione dal backend di business logic:
 
-1. **Platform.Portal** - Shell centrale che fornisce:
-   - Autenticazione unificata
-   - Dashboard con accesso alle applicazioni
-   - Gestione utenti centralizzata
-   - Emissione JWT token per le applicazioni
+1. **Platform.Client** - Interfaccia Utente (SPA):
+   - Sviluppata in React 19 + TypeScript + Vite.
+   - Fornisce un'esperienza fluida e reattiva priva di ricaricamenti di pagina completi.
+   - Gestione centralizzata del layout, menu laterale, orologio digitale dinamico, stato di login ed autorizzazione dei menu.
 
-2. **Platform.Shared** - Libreria condivisa con:
-   - Modelli e costanti comuni
-   - Servizi riutilizzabili (JWT, encryption)
-   - Helper utilities
+2. **Platform.Portal** - Shell Backend di Gateway:
+   - Web API C# .NET 10.
+   - Fornisce i file statici compilati di React.
+   - Espone le API REST in formato JSON per la sessione utente, autenticazione esterna OAuth (Google, Microsoft) e gestione degli accessi.
+   - Gestisce la sicurezza tramite cookie crittografati HTTP-Only.
 
-3. **Apps/** - Applicazioni indipendenti che possono:
-   - Essere deployate separatamente
-   - Avere il proprio database
-   - Scalare indipendentemente
-   - Autenticarsi tramite JWT del Portal
+3. **Platform.Shared** - Libreria Condivisa:
+   - Contiene entità di base per il DB (`AuditableEntity`).
+   - Costanti di branding e stili predefiniti (colori sociali Videosystem).
+   - Servizi trasversali come la validazione dei file caricati e la crittografia.
 
-### Vantaggi dell'Architettura
-
-✅ **Scalabilità**: Ogni app può scalare indipendentemente  
-✅ **Manutenibilità**: Modifiche isolate non impattano altre app  
-✅ **Deploy Indipendente**: Release separate per ogni componente  
-✅ **Team Autonomi**: Team diversi possono lavorare su app diverse  
-✅ **Tecnologie Miste**: Possibilità di usare tech diverse per app diverse  
-
-## Dettagli Tecnici
-
-### Autenticazione
-
-**Portal → Apps:**
-```
-User → Login Portal → JWT Token → App valida token → Accesso concesso
-```
-
-Il Portal emette un JWT token che contiene:
-- UserId
-- Username
-- Email
-- Ruoli (Admin, User)
-
-Ogni app valida il token usando la stessa chiave segreta condivisa.
-
-### Database Strategy
-
-**Approccio Database-per-App:**
-- `VideosystemPortal` - Database del Portal (utenti, ruoli)
-- `VideosystemKiosk` - Database dell'app Kiosk
-- Future app avranno il proprio database
-
-Questo permette:
-- Isolamento dei dati
-- Schema indipendente per ogni app
-- Backup/restore separati
-- Scalabilità del database
-
-### Comunicazione Inter-Servizi
-
-Attualmente: **Nessuna comunicazione diretta** tra app.
-
-Se necessario in futuro, implementare:
-- REST API tra servizi
-- Message queue (RabbitMQ, Azure Service Bus)
-- gRPC per performance elevate
-
-### Logging Centralizzato
-
-Tutti i servizi loggano usando **Serilog** con:
-- Console output (sviluppo)
-- File output (produzione)
-- Formato standardizzato
-
-In futuro, considerare:
-- Seq (https://datalust.co/seq)
-- ELK Stack (Elasticsearch, Logstash, Kibana)
-- Azure Application Insights
-
-## Best Practices Implementate
-
-### Sicurezza
-
-✅ Password hashing con Identity (PBKDF2)  
-✅ JWT con scadenza (60 minuti default)  
-✅ HTTPS obbligatorio in produzione  
-✅ CSRF protection su tutti i form  
-✅ Input validation client + server  
-✅ Password encryption per dati sensibili (AES-256)  
-
-### Performance
-
-✅ Async/await per operazioni I/O  
-✅ DbContext con connection pooling  
-✅ Static files caching  
-✅ Bootstrap CDN per performance  
-
-### Codice
-
-✅ Clean Architecture  
-✅ Dependency Injection  
-✅ Repository pattern (tramite EF Core)  
-✅ DTO per separazione concerns  
-✅ Commenti XML su metodi pubblici  
-
-## Roadmap Futura
-
-### Funzionalità da Aggiungere
-
-1. **Email Service**
-   - Notifiche via email
-   - Password reset
-   - Conferma registrazione
-
-2. **Audit Log**
-   - Tracciamento azioni utenti
-   - Storia modifiche dati
-   - Compliance GDPR
-
-3. **Dashboard Analytics**
-   - Statistiche utilizzo app
-   - Grafici attività utenti
-   - Report automatici
-
-4. **API Gateway** (se molte app)
-   - Routing unificato
-   - Rate limiting
-   - Caching
-
-5. **Health Checks**
-   - Monitoraggio stato app
-   - Alert su problemi
-   - Dashboard stato servizi
-
-### Tecnologie da Considerare
-
-- **Blazor Server/WebAssembly**: Per app più interattive
-- **SignalR**: Per real-time features
-- **Redis**: Per caching distribuito
-- **Docker**: Per containerizzazione
-- **Kubernetes**: Per orchestrazione (se molte app)
-
-## Migrazione da Identity Locale ad Active Directory
-
-Quando si vorrà integrare Active Directory:
-
-1. **Installare pacchetto**:
-```bash
-dotnet add package Microsoft.AspNetCore.Authentication.Negotiate
-```
-
-2. **Configurare in Program.cs**:
-```csharp
-builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme)
-    .AddNegotiate();
-```
-
-3. **Mapping utenti AD → Database**:
-   - Sincronizzazione automatica al primo login
-   - Mantenere tabella utenti per dati aggiuntivi
-   - Ruoli possono essere gestiti internamente o da AD Groups
-
-## Performance Tips
-
-### Database
-
-- Usare indici su colonne frequently queried
-- Abilitare query caching
-- Considerare read replicas per carichi pesanti
-- Monitorare slow queries
-
-### Frontend
-
-- Lazy loading per JavaScript pesante
-- Image optimization
-- CDN per static assets
-- HTTP/2 per multiplexing
-
-### Backend
-
-- Response caching per dati statici
-- Distributed caching (Redis) per sessioni
-- Background jobs per task lunghi (Hangfire)
-- Connection pooling già abilitato
-
-## Monitoraggio Produzione
-
-### Metriche da Tracciare
-
-- Response time (p50, p95, p99)
-- Error rate
-- CPU/Memory usage
-- Database query performance
-- Failed login attempts
-- Active users
-
-### Tools Consigliati
-
-- **Application Insights** (Azure)
-- **New Relic**
-- **Datadog**
-- **Prometheus + Grafana** (self-hosted)
-
-## Note sulla Sicurezza
-
-### Checklist Pre-Produzione
-
-- [ ] JWT SecretKey robusta (min 32 char casuali)
-- [ ] Connection strings in environment variables
-- [ ] HTTPS con certificato valido
-- [ ] Firewall configurato
-- [ ] Database user con privilegi minimi
-- [ ] Backup automatici configurati
-- [ ] Rate limiting su login endpoint
-- [ ] Security headers configurati
-- [ ] XSS protection abilitata
-- [ ] SQL injection prevention (parametrizzazione query)
-
-### Security Headers da Aggiungere
-
-In `Program.cs`:
-
-```csharp
-app.Use(async (context, next) =>
-{
-    context.Response.Headers.Add("X-Content-Type-Options", "nosniff");
-    context.Response.Headers.Add("X-Frame-Options", "DENY");
-    context.Response.Headers.Add("X-XSS-Protection", "1; mode=block");
-    context.Response.Headers.Add("Referrer-Policy", "strict-origin-when-cross-origin");
-    await next();
-});
-```
-
-## Contatti Team
-
-Per domande tecniche:
-- Team IT Videosystem
-- Email: it@videosystem.it
+4. **Apps/** - Moduli Verticali Indipendenti:
+   - Attualmente ospita il modulo **ConfigurationKiosk**.
+   - Ogni app ha le proprie tabelle DB, i propri servizi di business logic, i propri controller API ed eventuali hub in tempo reale (SignalR).
 
 ---
 
-**Documento**: INTC_202511251127  
-**Autore**: Platform Team  
-**Versione**: 1.0.0
+## Dettagli Tecnici Chiave
+
+### Autenticazione Ibrida e OAuth
+Il portale centrale utilizza una strategia di autenticazione basata su sessione cookie ASP.NET Core Identity.
+- **Login Esterno (Google / Microsoft)**: I reindirizzamenti OAuth sfidano l'utente sui server esterni. Una volta autenticato, il server .NET genera la sessione e restituisce il cookie al browser.
+- **Proxying in Sviluppo**: Il client React (porta `5173`) inoltra le chiamate a `/api/*` e `/Account/*` a `https://localhost:5001`. Questo preserva la trasmissione sicura dei cookie di sessione sullo stesso dominio virtuale.
+
+### Realtime con SignalR Websocket
+Nel modulo **ConfigurationKiosk**:
+- Il client stabilisce una connessione WebSocket persistente con `/kioskhub`.
+- Per consentire questo handshake, il proxy di sviluppo in `vite.config.ts` ha abilitato l'opzione `ws: true`.
+- Ogni volta che un utente compila una checklist, le modifiche debounced vengono inviate via API ed innescano l'evento SignalR `DataUpdated` che aggiorna in tempo reale il progresso visualizzato dagli altri operatori.
+
+### Database Strategy (PostgreSQL + Supabase local)
+Il database del portale e delle app è ospitato su PostgreSQL (Supabase locale).
+- Il Pooler di Supabase risponde sulla porta locale `54322`.
+- La stringa di connessione ha impostato `SSL Mode=Disable` e `Trust Server Certificate=True` per bypassare controlli di certificato SSL non validati in ambiente di sviluppo locale.
+
+---
+
+## Best Practices & Sicurezza
+
+- ✅ **Sicurezza Cookie**: Sessioni memorizzate su cookie crittografati con flag `HttpOnly` e `Secure`, bloccando letture javascript dannose.
+- ✅ **Validazione dei Template**: I file JSON dei template checklist caricati dagli amministratori sono validati dal parser client di React prima dell'invio.
+- ✅ **Gestione Permessi**: Un pannello amministratore consente di concedere privilegi (`View`, `Create`, `Edit`, `Delete`) per singole applicazioni. La modale applica dipendenze automatiche (es. per concedere modifiche si assegna in automatico la visualizzazione).
+- ✅ **Gestione Tipi**: I campi specificati nel JSON Kiosk (`toggle`, `checkbox`, `date`, `signature`, `file`, etc.) sono mappati uno a uno e renderizzati con i corrispondenti controlli responsive Bootstrap nel modulo di compilazione.
+
+---
+
+**Autore**: Platform Team Videosystem  
+**Versione**: 1.1.0  
+**Ultimo Aggiornamento**: Luglio 2026

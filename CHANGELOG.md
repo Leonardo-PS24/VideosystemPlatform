@@ -5,6 +5,19 @@ Tutte le modifiche notevoli a questo progetto saranno documentate in questo file
 Il formato è basato su [Keep a Changelog](https://keepachangelog.com/it/1.0.0/),
 e questo progetto aderisce al [Semantic Versioning](https://semver.org/lang/it/).
 
+## [1.1.0] - 2026-07-17
+
+### Aggiunto
+- ✨ Migrazione dell'interfaccia utente da C# MVC Razor ad una moderna Single Page Application (SPA) in **React 19 + TypeScript + Vite**.
+- ✨ Riorganizzazione della struttura di progetto: spostato il modulo frontend in una cartella isolata `src/Platform.Client`, separandolo dal backend per una migliore manutenibilità.
+- ✨ Migrazione del database da SQL Server a **PostgreSQL (Supabase)**.
+- ✨ Supporto all'autenticazione tramite provider esterni: integrati **Google** e **Microsoft Account** OAuth.
+- ✨ Riscritto il modulo **Gestione Utenti** e creata la nuova **Gestione Permessi Applicativi** (tramite modale con dipendenze logiche di lettura/scrittura) in React.
+- ✨ Gestione dei template delle checklist KioskConfig in React con supporto per il caricamento e la validazione client-side di file `.json`.
+
+### Corretto
+- 🐛 Risolto l'errore 400 Bad Request durante la creazione di template checklist dovuto al tipo di dato di `version` (stringa float convertita ad intero prima dell'invio).
+
 ## [1.0.0] - 2024-11-25
 
 ### Aggiunto

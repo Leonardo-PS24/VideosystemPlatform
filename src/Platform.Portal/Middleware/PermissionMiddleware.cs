@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Platform.Portal.Models;
 using Platform.Portal.Services;
@@ -39,7 +39,8 @@ public class PermissionMiddleware
     // Mapping route -> applicazione
     private static readonly (string Route, string Application)[] RouteMapping = new[]
     {
-        ("/kiosk", ApplicationName.ConfigurationKiosk)
+        ("/kiosk", ApplicationName.ConfigurationKiosk),
+        ("/skriptkiosk", ApplicationName.SkriptkioskChecklist)
     };
 
     public PermissionMiddleware(RequestDelegate next, ILogger<PermissionMiddleware> logger)

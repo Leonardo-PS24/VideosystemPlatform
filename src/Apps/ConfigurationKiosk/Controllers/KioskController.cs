@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Platform.Shared.Services;
 using ConfigurationKiosk.Models;
@@ -8,70 +8,79 @@ using System.Security.Claims;
 namespace ConfigurationKiosk.Controllers;
 
 [Authorize]
-public class KioskController : Controller
+[ApiController]
+[Route("api/[controller]")]
+public class KioskController : ControllerBase
 {
     private readonly IKioskService _kioskService;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IAdminAuthService _adminAuthService;
     private readonly ILogger<KioskController> _logger;
 
-    public KioskController(IKioskService kioskService, IAuthorizationService authorizationService, ILogger<KioskController> logger)
+    public KioskController(
+        IKioskService kioskService, 
+        IAuthorizationService authorizationService, 
+        IAdminAuthService adminAuthService,
+        ILogger<KioskController> logger)
     {
         _kioskService = kioskService;
         _authorizationService = authorizationService;
+        _adminAuthService = adminAuthService;
         _logger = logger;
     }
 
-    public async Task<IActionResult> Index()
+    [HttpGet]
+    public async Task<IActionResult> GetDashboard()
     {
-        ViewData["CanCreate"] = (await _authorizationService.AuthorizeAsync(User, "Kiosk.Create")).Succeeded;
+        var canCreate = (await _authorizationService.AuthorizeAsync(User, "Kiosk.Create")).Succeeded;
+        var canDelete = (await _authorizationService.AuthorizeAsync(User, "Kiosk.Delete")).Succeeded;
 
         try
         {
             var instances = await _kioskService.GetRecentInstancesAsync();
             var templates = await _kioskService.GetActiveTemplatesAsync();
             
-            var model = new KioskDashboardViewModel
+            return Ok(new
             {
-                RecentInstances = instances,
-                AvailableTemplates = templates
-            };
-            
-            return View(model);
+                canCreate = canCreate,
+                canDelete = canDelete,
+                recentInstances = instances,
+                availableTemplates = templates
+            });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Errore nel caricamento della dashboard Kiosk.");
-            TempData["ErrorMessage"] = "Impossibile caricare i dati. Verificare che il database sia aggiornato (migrazioni).";
-            return View(new KioskDashboardViewModel());
+            return StatusCode(500, new { message = "Impossibile caricare i dati." });
         }
     }
 
     [HttpPost]
     [Authorize(Policy = "Kiosk.Create")]
-    public async Task<IActionResult> Create(int templateId, string machineSerial)
+    public async Task<IActionResult> Create([FromBody] CreateRequest request)
     {
         var userId = User.Identity?.Name ?? "Unknown";
-        var instance = await _kioskService.CreateInstanceAsync(templateId, machineSerial, userId);
-        return RedirectToAction("Compile", new { id = instance.Id });
+        var instance = await _kioskService.CreateInstanceAsync(request.TemplateId, request.MachineSerial, userId);
+        return Ok(instance);
     }
 
-    public async Task<IActionResult> Compile(int id)
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetInstance(int id)
     {
-        ViewData["CanEdit"] = (await _authorizationService.AuthorizeAsync(User, "Kiosk.Edit")).Succeeded;
+        var canEdit = (await _authorizationService.AuthorizeAsync(User, "Kiosk.Edit")).Succeeded;
 
         var instance = await _kioskService.GetInstanceByIdAsync(id);
-        if (instance == null) return NotFound();
+        if (instance == null) return NotFound(new { message = "Istanza non trovata" });
 
-        var model = new KioskCompileViewModel
+        return Ok(new
         {
-            Instance = instance,
-            Template = instance.Template
-        };
-
-        return View(model);
+            canEdit = canEdit,
+            instance = instance,
+            template = instance.Template
+        });
     }
 
-    [HttpPatch]
+    [HttpPatch("save")]
     [Authorize(Policy = "Kiosk.Edit")]
     public async Task<IActionResult> Save([FromBody] SaveRequest request)
     {
@@ -80,7 +89,7 @@ public class KioskController : Controller
         return Ok();
     }
 
-    [HttpPatch]
+    [HttpPatch("complete")]
     [Authorize(Policy = "Kiosk.Edit")]
     public async Task<IActionResult> Complete([FromBody] CompleteRequest request)
     {
@@ -90,8 +99,8 @@ public class KioskController : Controller
         return Ok();
     }
 
+    [HttpPatch("start-revision")]
     [Authorize(Roles = "Admin")]
-    [HttpPatch]
     public async Task<IActionResult> StartRevision([FromBody] InstanceRequest request)
     {
         var userId = User.Identity?.Name ?? "Unknown";
@@ -99,8 +108,8 @@ public class KioskController : Controller
         return Ok();
     }
 
+    [HttpPatch("finalize-revision")]
     [Authorize(Roles = "Admin")]
-    [HttpPatch]
     public async Task<IActionResult> FinalizeRevision([FromBody] FinalizeRequest request)
     {
         var userId = User.Identity?.Name ?? "Unknown";
@@ -108,7 +117,7 @@ public class KioskController : Controller
         return Ok(new { changesDetected = result });
     }
 
-    [HttpDelete]
+    [HttpDelete("{id}")]
     [Authorize(Policy = "Kiosk.Delete")]
     public async Task<IActionResult> DeleteInstance(int id)
     {
@@ -116,21 +125,81 @@ public class KioskController : Controller
         return Ok();
     }
 
-    public async Task<IActionResult> History(int id)
+    [HttpGet("{id}/history")]
+    public async Task<IActionResult> GetHistory(int id)
     {
         var instance = await _kioskService.GetInstanceByIdAsync(id);
-        if (instance == null) return NotFound();
+        if (instance == null) return NotFound(new { message = "Istanza non trovata" });
 
         var history = await _kioskService.GetInstanceHistoryAsync(id);
 
-        var model = new KioskHistoryViewModel
+        return Ok(new
         {
-            Instance = instance,
-            History = history
-        };
-
-        return View(model);
+            instance = instance,
+            history = history
+        });
     }
+
+    [HttpPost("{id}/unlock-with-admin")]
+    public async Task<IActionResult> UnlockWithAdmin(int id, [FromBody] UnlockRequest request)
+    {
+        if (string.IsNullOrEmpty(request.Username) || string.IsNullOrEmpty(request.Password))
+        {
+            return BadRequest(new { message = "Username e password dell'amministratore sono richiesti." });
+        }
+
+        var isAuthorized = await _adminAuthService.VerifyAdminCredentialsAsync(request.Username, request.Password);
+        if (!isAuthorized)
+        {
+            return BadRequest(new { message = "Credenziali non valide o l'utente non è un amministratore." });
+        }
+
+        await _kioskService.StartRevisionAsync(id, request.Username);
+        return Ok(new { message = "Checklist sbloccata con successo." });
+    }
+
+    [HttpGet("{id}/diff")]
+    public async Task<IActionResult> GetDiff(int id)
+    {
+        var diff = await _kioskService.GetInstanceDiffAsync(id);
+        return Ok(diff);
+    }
+
+    [HttpPost("{id}/submit-approval")]
+    public async Task<IActionResult> SubmitApproval(int id)
+    {
+        var userId = User.Identity?.Name ?? "Unknown";
+        await _kioskService.SubmitApprovalAsync(id, userId);
+        return Ok();
+    }
+
+    [HttpPost("{id}/reject-revision")]
+    public async Task<IActionResult> RejectRevision(int id)
+    {
+        var userId = User.Identity?.Name ?? "Unknown";
+        await _kioskService.RejectRevisionAsync(id, userId);
+        return Ok();
+    }
+
+    [HttpPost("{id}/propose-revision")]
+    public async Task<IActionResult> ProposeRevision(int id)
+    {
+        var userId = User.Identity?.Name ?? "Unknown";
+        await _kioskService.StartRevisionAsync(id, userId);
+        return Ok();
+    }
+}
+
+public class UnlockRequest
+{
+    public string Username { get; set; } = "";
+    public string Password { get; set; } = "";
+}
+
+public class CreateRequest
+{
+    public int TemplateId { get; set; }
+    public string MachineSerial { get; set; } = "";
 }
 
 public class SaveRequest 

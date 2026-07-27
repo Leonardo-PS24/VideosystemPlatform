@@ -1,4 +1,4 @@
-﻿namespace Platform.Portal.Models;
+namespace Platform.Portal.Models;
 
 public class ApplicationInfo
 {
@@ -8,4 +8,5 @@ public class ApplicationInfo
     public string AppId { get; set; } = string.Empty;
     public string Icon { get; set; } = "apps";
     public string CompanyId { get; set; } = string.Empty;
+    public bool ComingSoon { get; set; } = false;
 }

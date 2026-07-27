@@ -1,45 +1,104 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Platform.Portal.Models; // Aggiunto per i nuovi modelli
+using Microsoft.EntityFrameworkCore;
+using Platform.Portal.Data;
+using Platform.Portal.Models;
+using Platform.Portal.Services;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace Platform.Portal.Controllers;
 
 /// <summary>
-/// Controller per la homepage e dashboard
+/// Controller API per la homepage e dashboard
 /// </summary>
 [Authorize]
-public class HomeController : Controller
+[ApiController]
+[Route("api/[controller]")]
+public class HomeController : ControllerBase
 {
     private readonly IConfiguration _configuration;
     private readonly ILogger<HomeController> _logger;
+    private readonly IPermissionService _permissionService;
+    private readonly ApplicationDbContext _context;
 
-    public HomeController(IConfiguration configuration, ILogger<HomeController> logger)
+    public HomeController(
+        IConfiguration configuration, 
+        ILogger<HomeController> logger,
+        IPermissionService permissionService,
+        ApplicationDbContext context)
     {
         _configuration = configuration;
         _logger = logger;
+        _permissionService = permissionService;
+        _context = context;
     }
 
     /// <summary>
-    /// Dashboard principale con lista delle aziende e le loro applicazioni disponibili
+    /// Restituisce la lista delle aziende e le loro applicazioni autorizzate per la dashboard React
     /// </summary>
-    public IActionResult Index()
+    [HttpGet]
+    public async Task<IActionResult> GetDashboardData()
     {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Challenge();
+        }
+
         var companies = _configuration.GetSection("Companies").Get<List<CompanyInfo>>() 
             ?? new List<CompanyInfo>();
         
-        // Qui potresti voler filtrare le aziende in base ai ruoli dell'utente,
-        // ma per ora mostriamo tutte le aziende e le loro app.
-        // La logica di filtro per le app sarà gestita a livello di singola app o in una vista dedicata.
+        var filteredCompanies = new List<CompanyInfo>();
+        foreach (var company in companies)
+        {
+            var hasCompanyAccess = await _permissionService.HasPermissionAsync(userId, $"Company_{company.Id}", PermissionType.View);
+            if (!hasCompanyAccess)
+            {
+                continue;
+            }
 
-        return View(companies);
+            var filteredApps = new List<ApplicationInfo>();
+            foreach (var app in company.Applications)
+            {
+                var hasView = await _permissionService.HasPermissionAsync(userId, app.AppId, PermissionType.View);
+                if (hasView)
+                {
+                    filteredApps.Add(app);
+                }
+            }
+
+            if (filteredApps.Any())
+            {
+                filteredCompanies.Add(new CompanyInfo
+                {
+                    Id = company.Id,
+                    Name = company.Name,
+                    PrimaryColor = company.PrimaryColor,
+                    SecondaryColor = company.SecondaryColor,
+                    Applications = filteredApps
+                });
+            }
+        }
+        
+        return Ok(filteredCompanies);
     }
 
     /// <summary>
-    /// Pagina di errore
+    /// Restituisce le statistiche generali del sistema per la dashboard
     /// </summary>
-    [AllowAnonymous]
-    public IActionResult Error()
+    [HttpGet("Stats")]
+    public async Task<IActionResult> GetDashboardStats()
     {
-        return View();
+        var activeUsers = await _context.Users.CountAsync(u => u.IsActive);
+        var completedChecklists = await _context.KioskChecklistInstances.CountAsync(i => i.Status == "Completed");
+
+        return Ok(new
+        {
+            activeUsers,
+            completedChecklists
+        });
     }
 }

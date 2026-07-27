@@ -243,3 +243,7 @@ project.lock.json
 # Logs
 logs/
 *.log
+
+# AI Agent folders
+.agents/
+.claude/

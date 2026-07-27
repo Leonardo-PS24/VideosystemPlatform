@@ -1,4 +1,4 @@
-﻿using Platform.Shared.Models;
+using Platform.Shared.Models;
 
 namespace Platform.Shared.Services;
 
@@ -22,6 +22,15 @@ public interface IKioskService
     
     // Finalizza una revisione (Admin) - Ritorna true se ci sono modifiche
     Task<bool> FinalizeRevisionAsync(int instanceId, string dataJson, string userId);
+
+    // Invia la proposta di revisione per l'approvazione (cambia stato a PendingApproval)
+    Task SubmitApprovalAsync(int instanceId, string userId);
+
+    // Rifiuta la proposta di revisione (ripristina la versione precedente)
+    Task RejectRevisionAsync(int instanceId, string userId);
+
+    // Ottiene il confronto (Diff) tra la bozza attuale e l'ultima versione completata
+    Task<List<KioskChecklistDiff>> GetInstanceDiffAsync(int instanceId);
 
     Task<List<KioskChecklistInstance>> GetRecentInstancesAsync();
     

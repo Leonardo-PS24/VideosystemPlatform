@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Platform.Portal.Models;
@@ -6,14 +6,15 @@ using Platform.Portal.Models.ViewModels;
 using Platform.Portal.Services;
 using System.Security.Claims;
 
-
 namespace Platform.Portal.Controllers;
 
 /// <summary>
-/// Controller per la gestione dei permessi delle applicazioni
+/// Controller API per la gestione dei permessi delle applicazioni
 /// </summary>
 [Authorize(Roles = "Admin")]
-public class PermissionsController : Controller
+[ApiController]
+[Route("api/[controller]")]
+public class PermissionsController : ControllerBase
 {
     private readonly IPermissionService _permissionService;
     private readonly UserManager<ApplicationUser> _userManager;
@@ -29,46 +30,46 @@ public class PermissionsController : Controller
         _logger = logger;
     }
 
+    /// <summary>
+    /// Restituisce la matrice dei permessi per tutti gli utenti, con filtri opzionali
+    /// </summary>
     [HttpGet]
-    public async Task<IActionResult> Index(string? roleFilter = null, string? applicationFilter = null)
+    public async Task<IActionResult> GetPermissionMatrix(string? roleFilter = null, string? applicationFilter = null)
     {
         try
         {
             var (users, applications) = await _permissionService.GetPermissionMatrixAsync(roleFilter, applicationFilter);
             
-            var viewModel = new PermissionMatrixViewModel
+            return Ok(new
             {
-                Users = users,
-                Applications = applications,
-                RoleFilter = roleFilter,
-                ApplicationFilter = applicationFilter
-            };
-            
-            return View(viewModel);
+                users = users,
+                applications = applications,
+                roleFilter = roleFilter,
+                applicationFilter = applicationFilter
+            });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error loading permission matrix");
-            TempData["ErrorMessage"] = "Errore durante il caricamento dei permessi.";
-            return RedirectToAction("Index", "Home");
+            return StatusCode(500, new { message = "Errore durante il caricamento dei permessi." });
         }
     }
 
     /// <summary>
-    /// Visualizza il form di modifica permessi per un utente
+    /// Restituisce i permessi correnti di un singolo utente
     /// </summary>
-    [HttpGet]
-    public async Task<IActionResult> EditUser(string userId)
+    [HttpGet("User/{userId}")]
+    public async Task<IActionResult> GetUserPermissions(string userId)
     {
         if (string.IsNullOrEmpty(userId))
         {
-            return NotFound();
+            return BadRequest(new { message = "UserId non valido" });
         }
 
         var user = await _userManager.FindByIdAsync(userId);
         if (user == null)
         {
-            return NotFound();
+            return NotFound(new { message = "Utente non trovato" });
         }
 
         var roles = await _userManager.GetRolesAsync(user);
@@ -102,19 +103,18 @@ public class PermissionsController : Controller
             });
         }
 
-        return View(viewModel);
+        return Ok(viewModel);
     }
 
     /// <summary>
     /// Salva i permessi modificati per un utente
     /// </summary>
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> EditUser(UserPermissionsViewModel model)
+    [HttpPost("User/{userId}")]
+    public async Task<IActionResult> SaveUserPermissions(string userId, [FromBody] UserPermissionsViewModel model)
     {
         if (!ModelState.IsValid)
         {
-            return View(model);
+            return BadRequest(ModelState);
         }
 
         try
@@ -125,7 +125,6 @@ public class PermissionsController : Controller
                 return Unauthorized();
             }
 
-            // Converti i permessi in dictionary
             var permissions = new Dictionary<string, PermissionType>();
 
             foreach (var app in model.Applications)
@@ -140,23 +139,21 @@ public class PermissionsController : Controller
                 permissions[app.ApplicationName] = permissionType;
             }
 
-            await _permissionService.SavePermissionsAsync(model.UserId, permissions, currentUserId);
+            await _permissionService.SavePermissionsAsync(userId, permissions, currentUserId);
 
-            TempData["Success"] = "Permessi salvati con successo";
-            return RedirectToAction(nameof(Index));
+            return Ok(new { message = "Permessi salvati con successo" });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error saving permissions for user {UserId}", model.UserId);
-            TempData["Error"] = "Errore nel salvataggio dei permessi";
-            return View(model);
+            _logger.LogError(ex, "Error saving permissions for user {UserId}", userId);
+            return BadRequest(new { message = "Errore nel salvataggio dei permessi" });
         }
     }
 
     /// <summary>
-    /// Toggle di un singolo permesso (AJAX)
+    /// Toggle di un singolo permesso (AJAX/API)
     /// </summary>
-    [HttpPost]
+    [HttpPost("Toggle")]
     public async Task<IActionResult> TogglePermission([FromBody] TogglePermissionRequest request)
     {
         try
@@ -164,7 +161,7 @@ public class PermissionsController : Controller
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(currentUserId))
             {
-                return Json(new { success = false, message = "Utente non autenticato" });
+                return BadRequest(new { message = "Utente non autenticato" });
             }
 
             // Ottieni il permesso esistente
@@ -193,36 +190,33 @@ public class PermissionsController : Controller
                     currentUserId);
             }
 
-            return Json(new { success = true, newValue = !currentValue });
+            return Ok(new { success = true, newValue = !currentValue });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error toggling permission");
-            return Json(new { success = false, message = "Errore nell'operazione" });
+            return BadRequest(new { success = false, message = "Errore nell'operazione" });
         }
     }
 
     /// <summary>
-    /// Elimina tutti i permessi di un utente (AJAX)
+    /// Elimina tutti i permessi di un utente
     /// </summary>
-    [HttpPost]
+    [HttpPost("Reset")]
     public async Task<IActionResult> DeleteAllUserPermissions([FromBody] DeletePermissionsRequest request)
     {
         try
         {
             await _permissionService.DeletePermissionsAsync(request.UserId);
-            return Json(new { success = true });
+            return Ok(new { success = true });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting permissions for user {UserId}", request.UserId);
-            return Json(new { success = false, message = "Errore nell'eliminazione dei permessi" });
+            return BadRequest(new { success = false, message = "Errore nell'eliminazione dei permessi" });
         }
     }
 
-    /// <summary>
-    /// Helper: Ottiene il valore di un permesso specifico
-    /// </summary>
     private bool GetPermissionValue(ApplicationPermission? permission, PermissionType type)
     {
         if (permission == null) return false;
@@ -237,9 +231,6 @@ public class PermissionsController : Controller
         };
     }
 
-    /// <summary>
-    /// Helper: Converte stringa in PermissionType
-    /// </summary>
     private PermissionType GetPermissionType(string typeString)
     {
         return typeString.ToLower() switch
@@ -251,11 +242,180 @@ public class PermissionsController : Controller
             _ => PermissionType.None
         };
     }
+
+    /// <summary>
+    /// Restituisce la matrice dei permessi per tutti i ruoli
+    /// </summary>
+    [HttpGet("Roles")]
+    public async Task<IActionResult> GetRolesPermissions()
+    {
+        try
+        {
+            var roles = await _permissionService.GetAllRolesAsync();
+            var applications = ApplicationName.GetAll();
+            
+            var roleMatrix = new List<object>();
+            foreach (var role in roles)
+            {
+                var rolePerms = await _permissionService.GetRolePermissionsAsync(role);
+                var appPermissions = applications.ToDictionary(
+                    app => app,
+                    app =>
+                    {
+                        var perm = rolePerms.FirstOrDefault(p => p.ApplicationName == app);
+                        return new
+                        {
+                            canView = perm?.CanView ?? false,
+                            canCreate = perm?.CanCreate ?? false,
+                            canEdit = perm?.CanEdit ?? false,
+                            canDelete = perm?.CanDelete ?? false
+                        };
+                    });
+                    
+                roleMatrix.Add(new
+                {
+                    roleName = role,
+                    applications = appPermissions
+                });
+            }
+
+            return Ok(new
+            {
+                roles = roleMatrix,
+                applications = applications
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting role permissions");
+            return StatusCode(500, new { message = "Errore durante il recupero dei permessi dei ruoli." });
+        }
+    }
+
+    /// <summary>
+    /// Restituisce i permessi di un singolo ruolo
+    /// </summary>
+    [HttpGet("Role/{roleName}")]
+    public async Task<IActionResult> GetRolePermissions(string roleName)
+    {
+        try
+        {
+            var rolePerms = await _permissionService.GetRolePermissionsAsync(roleName);
+            
+            var applications = new List<ApplicationPermissionItem>();
+            foreach (var appName in ApplicationName.GetAll())
+            {
+                var permission = rolePerms.FirstOrDefault(p => p.ApplicationName == appName);
+                applications.Add(new ApplicationPermissionItem
+                {
+                    ApplicationName = appName,
+                    DisplayName = ApplicationName.GetDisplayName(appName),
+                    Icon = ApplicationName.GetIcon(appName),
+                    CanView = permission?.CanView ?? false,
+                    CanCreate = permission?.CanCreate ?? false,
+                    CanEdit = permission?.CanEdit ?? false,
+                    CanDelete = permission?.CanDelete ?? false
+                });
+            }
+            
+            return Ok(new
+            {
+                roleName = roleName,
+                applications = applications
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting permissions for role {Role}", roleName);
+            return StatusCode(500, new { message = "Errore durante il recupero dei permessi del ruolo." });
+        }
+    }
+
+    /// <summary>
+    /// Salva i permessi di un ruolo specifico
+    /// </summary>
+    [HttpPost("Role/{roleName}")]
+    public async Task<IActionResult> SaveRolePermissions(string roleName, [FromBody] SaveRolePermissionsDto model)
+    {
+        try
+        {
+            var permissions = new Dictionary<string, PermissionType>();
+            foreach (var app in model.Applications)
+            {
+                var permissionType = PermissionType.None;
+                if (app.CanView) permissionType |= PermissionType.View;
+                if (app.CanCreate) permissionType |= PermissionType.Create;
+                if (app.CanEdit) permissionType |= PermissionType.Edit;
+                if (app.CanDelete) permissionType |= PermissionType.Delete;
+                
+                permissions[app.ApplicationName] = permissionType;
+            }
+            
+            await _permissionService.SaveRolePermissionsAsync(roleName, permissions);
+            return Ok(new { message = "Permessi del ruolo salvati con successo" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error saving permissions for role {Role}", roleName);
+            return BadRequest(new { message = "Errore nel salvataggio dei permessi del ruolo" });
+        }
+    }
+
+    /// <summary>
+    /// Crea un nuovo ruolo personalizzato
+    /// </summary>
+    [HttpPost("CreateRole")]
+    public async Task<IActionResult> CreateRole([FromBody] CreateRoleRequest request)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(request.RoleName))
+            {
+                return BadRequest(new { message = "Il nome del ruolo è obbligatorio." });
+            }
+
+            await _permissionService.CreateRoleAsync(request.RoleName, request.Description);
+            return Ok(new { message = $"Ruolo '{request.RoleName}' creato con successo." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating role {RoleName}", request.RoleName);
+            return StatusCode(500, new { message = "Errore durante la creazione del ruolo." });
+        }
+    }
+
+    /// <summary>
+    /// Elimina un ruolo personalizzato
+    /// </summary>
+    [HttpDelete("Role/{roleName}")]
+    public async Task<IActionResult> DeleteRole(string roleName)
+    {
+        try
+        {
+            await _permissionService.DeleteRoleAsync(roleName);
+            return Ok(new { message = $"Ruolo '{roleName}' eliminato con successo." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting role {RoleName}", roleName);
+            return StatusCode(500, new { message = "Errore durante l'eliminazione del ruolo." });
+        }
+    }
 }
 
-/// <summary>
-/// Request per toggle permesso
-/// </summary>
+public class SaveRolePermissionsDto
+{
+    public List<ApplicationPermissionItem> Applications { get; set; } = new();
+}
+
 public class TogglePermissionRequest
 {
     public string UserId { get; set; } = string.Empty;
@@ -263,10 +423,13 @@ public class TogglePermissionRequest
     public string PermissionType { get; set; } = string.Empty;
 }
 
-/// <summary>
-/// Request per eliminazione permessi
-/// </summary>
 public class DeletePermissionsRequest
 {
     public string UserId { get; set; } = string.Empty;
+}
+
+public class CreateRoleRequest
+{
+    public string RoleName { get; set; } = string.Empty;
+    public string? Description { get; set; }
 }

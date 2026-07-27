@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace Platform.Portal.Models;
 
@@ -11,6 +11,11 @@ public static class ApplicationName
     /// Applicazione Configuration Kiosk
     /// </summary>
     public const string ConfigurationKiosk = "ConfigurationKiosk";
+    public const string SkriptkioskChecklist = "SkriptkioskChecklist";
+    
+    // Company master permissions
+    public const string Company_Pharmaself24 = "Company_Pharmaself24";
+    public const string Company_Skriptkiosk = "Company_Skriptkiosk";
     
     /// <summary>
     /// Ottiene tutte le applicazioni disponibili
@@ -19,7 +24,10 @@ public static class ApplicationName
     {
         return new List<string>
         {
-            ConfigurationKiosk
+            Company_Pharmaself24,
+            Company_Skriptkiosk,
+            ConfigurationKiosk,
+            SkriptkioskChecklist
         };
     }
     
@@ -30,7 +38,10 @@ public static class ApplicationName
     {
         return applicationName switch
         {
-            ConfigurationKiosk => "Configuration Kiosk",
+            Company_Pharmaself24 => "Abilita Pharmaself24",
+            Company_Skriptkiosk => "Abilita SkriptKiosk",
+            ConfigurationKiosk => "Configuration Kiosk (Pharmaself24)",
+            SkriptkioskChecklist => "Configuration Kiosk (SkriptKiosk)",
             _ => applicationName
         };
     }
@@ -42,7 +53,10 @@ public static class ApplicationName
     {
         return applicationName switch
         {
+            Company_Pharmaself24 => "business",
+            Company_Skriptkiosk => "business",
             ConfigurationKiosk => "fact_check",
+            SkriptkioskChecklist => "fact_check",
             _ => "apps"
         };
     }
