@@ -44,7 +44,7 @@ public class AdminController : ControllerBase
     [HttpGet("Users")]
     public async Task<IActionResult> GetUsers()
     {
-        var userList = await (from user in _context.Users
+        var query = await (from user in _context.Users
             join userRole in _context.UserRoles on user.Id equals userRole.UserId into ur
             from subUserRole in ur.DefaultIfEmpty()
             join role in _context.Roles on subUserRole.RoleId equals role.Id into r
@@ -59,6 +59,8 @@ public class AdminController : ControllerBase
                 Role = subRole.Name ?? "Nessun Ruolo",
                 CreatedAt = user.CreatedAt
             }).ToListAsync();
+
+        var userList = query.GroupBy(u => u.Id).Select(g => g.First()).ToList();
 
         return Ok(userList);
     }

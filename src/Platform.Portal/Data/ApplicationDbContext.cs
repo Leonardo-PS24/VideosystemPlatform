@@ -27,6 +27,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<SkriptKioskChecklistInstance> SkriptKioskChecklistInstances { get; set; }
     public DbSet<SkriptKioskChecklistHistory> SkriptKioskChecklistHistories { get; set; }
 
+    // PBAC Tables
+    public DbSet<Platform.Portal.Models.PBAC.PermissionCatalog> PermissionCatalogs { get; set; }
+    public DbSet<Platform.Portal.Models.PBAC.Policy> Policies { get; set; }
+    public DbSet<Platform.Portal.Models.PBAC.PolicyPermission> PolicyPermissions { get; set; }
+    public DbSet<Platform.Portal.Models.PBAC.UserPolicyAssignment> UserPolicyAssignments { get; set; }
+    public DbSet<Platform.Portal.Models.PBAC.RolePolicyAssignment> RolePolicyAssignments { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         base.OnConfiguring(optionsBuilder);

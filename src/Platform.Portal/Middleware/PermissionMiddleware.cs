@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Platform.Portal.Models;
 using Platform.Portal.Services;
+using Platform.Portal.Services.PBAC;
 using System;
 using System.Linq;
 using System.Security.Claims;
@@ -10,7 +11,7 @@ using System.Threading.Tasks;
 namespace Platform.Portal.Middleware;
 
 /// <summary>
-/// Middleware per il controllo automatico dei permessi
+/// Middleware per il controllo automatico dei permessi PBAC sulle route
 /// </summary>
 public class PermissionMiddleware
 {
@@ -29,18 +30,21 @@ public class PermissionMiddleware
         "/error"
     };
 
-    // Route amministrative (già protette da [Authorize])
+    // Route amministrative (gestite da [Authorize])
     private static readonly string[] AdminRoutes = new[]
     {
         "/admin",
-        "/permissions"
+        "/permissions",
+        "/api/pbacadmin"
     };
 
-    // Mapping route -> applicazione
-    private static readonly (string Route, string Application)[] RouteMapping = new[]
+    // Mapping route -> PBAC Key prefix
+    private static readonly (string Route, string KeyPrefix, string CompanyId)[] RouteMapping = new[]
     {
-        ("/kiosk", ApplicationName.ConfigurationKiosk),
-        ("/skriptkiosk", ApplicationName.SkriptkioskChecklist)
+        ("/kiosk", "pharmaself:kiosk", "Pharmaself24"),
+        ("/api/kiosk", "pharmaself:kiosk", "Pharmaself24"),
+        ("/skriptkiosk", "skript:checklist", "Skriptkiosk"),
+        ("/api/skriptkiosk", "skript:checklist", "Skriptkiosk")
     };
 
     public PermissionMiddleware(RequestDelegate next, ILogger<PermissionMiddleware> logger)
@@ -49,13 +53,14 @@ public class PermissionMiddleware
         _logger = logger;
     }
 
-    public async Task InvokeAsync(HttpContext context, IPermissionService permissionService)
+    public async Task InvokeAsync(HttpContext context, IPermissionService permissionService, IPbacService pbacService)
     {
         var path = context.Request.Path.Value?.ToLower() ?? "";
 
         // Skip per file statici
         if (path.StartsWith("/css") || path.StartsWith("/js") || 
-            path.StartsWith("/lib") || path.StartsWith("/images"))
+            path.StartsWith("/lib") || path.StartsWith("/images") ||
+            path.Contains("."))
         {
             await _next(context);
             return;
@@ -91,52 +96,76 @@ public class PermissionMiddleware
         }
 
         // Admin bypass: Admin ha sempre tutti i permessi
-        if (await permissionService.IsAdminAsync(userId))
+        if (context.User.IsInRole("Admin") || await permissionService.IsAdminAsync(userId))
         {
             await _next(context);
             return;
         }
 
-        // Trova l'applicazione dalla route
-        var applicationName = RouteMapping
-            .FirstOrDefault(m => path.StartsWith(m.Route))
-            .Application;
+        // Trova la configurazione dalla route
+        var routeConfig = RouteMapping.FirstOrDefault(m => path.StartsWith(m.Route));
 
-        if (string.IsNullOrEmpty(applicationName))
+        if (string.IsNullOrEmpty(routeConfig.KeyPrefix))
         {
             // Route non mappata, procedi normalmente
             await _next(context);
             return;
         }
 
-        // Determina il permesso richiesto dal metodo HTTP
-        var requiredPermission = context.Request.Method.ToUpper() switch
+        // Determina il tipo di azione dal metodo HTTP
+        var action = context.Request.Method.ToUpper() switch
         {
-            "GET" => PermissionType.View,
-            "POST" => PermissionType.Create,
-            "PUT" => PermissionType.Edit,
-            "PATCH" => PermissionType.Edit,
-            "DELETE" => PermissionType.Delete,
-            _ => PermissionType.View
+            "GET" => "view",
+            "POST" => "create",
+            "PUT" => "edit",
+            "PATCH" => "edit",
+            "DELETE" => "delete",
+            _ => "view"
         };
 
-        // Verifica permesso
-        var hasPermission = await permissionService.HasPermissionAsync(
-            userId, 
-            applicationName, 
-            requiredPermission);
+        string pbacKey = $"{routeConfig.KeyPrefix}:{action}";
 
-        if (!hasPermission)
+        // Verifica via PBAC
+        var hasPbacAccess = await pbacService.HasPermissionAsync(userId, pbacKey, routeConfig.CompanyId);
+
+        if (!hasPbacAccess)
         {
-            _logger.LogWarning(
-                "Access denied for user {UserId} ({Username}) to {Application} with {Permission}",
-                userId,
-                context.User.Identity?.Name,
-                applicationName,
-                requiredPermission);
+            // Fallback al legacy PermissionService per compatibilità transitoria
+            var legacyPermissionType = action switch
+            {
+                "view" => PermissionType.View,
+                "create" => PermissionType.Create,
+                "edit" => PermissionType.Edit,
+                "delete" => PermissionType.Delete,
+                _ => PermissionType.View
+            };
 
-            context.Response.Redirect("/Account/AccessDenied");
-            return;
+            string legacyAppName = routeConfig.KeyPrefix.Contains("pharmaself") 
+                ? ApplicationName.ConfigurationKiosk 
+                : ApplicationName.SkriptkioskChecklist;
+
+            bool hasLegacyAccess = await permissionService.HasPermissionAsync(userId, legacyAppName, legacyPermissionType);
+
+            if (!hasLegacyAccess)
+            {
+                _logger.LogWarning(
+                    "Access denied for user {UserId} ({Username}) to {Key} (Company: {Company})",
+                    userId,
+                    context.User.Identity?.Name,
+                    pbacKey,
+                    routeConfig.CompanyId);
+
+                if (context.Request.Path.StartsWithSegments("/api"))
+                {
+                    context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                    await context.Response.WriteAsJsonAsync(new { message = "Accesso negato. Permesso non sufficiente." });
+                }
+                else
+                {
+                    context.Response.Redirect("/Account/AccessDenied");
+                }
+                return;
+            }
         }
 
         // Permesso concesso, procedi
@@ -144,9 +173,6 @@ public class PermissionMiddleware
     }
 }
 
-/// <summary>
-/// Extension method per registrare il middleware
-/// </summary>
 public static class PermissionMiddlewareExtensions
 {
     public static IApplicationBuilder UsePermissionMiddleware(this IApplicationBuilder builder)

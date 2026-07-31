@@ -1,11 +1,9 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
-using Platform.Portal.Data;
-using System.Linq;
+using Microsoft.Extensions.DependencyInjection;
+using Platform.Portal.Services.PBAC;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 
 namespace Platform.Portal.Authorization;
 
@@ -21,7 +19,7 @@ public class PermissionHandler : AuthorizationHandler<PermissionRequirement>
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, PermissionRequirement requirement)
     {
         using var scope = _scopeFactory.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var pbacService = scope.ServiceProvider.GetRequiredService<IPbacService>();
         var httpContextAccessor = scope.ServiceProvider.GetRequiredService<IHttpContextAccessor>();
 
         var httpContext = httpContextAccessor.HttpContext;
@@ -47,61 +45,35 @@ public class PermissionHandler : AuthorizationHandler<PermissionRequirement>
             return;
         }
 
-        var permissionParts = requirement.Permission.Split('.');
-        if (permissionParts.Length != 2)
+        // Mappa la stringa di requisito (es. "ConfigurationKiosk.Create" -> "pharmaself:kiosk:create")
+        string pbacKey = MapToPbacKey(requirement.Permission);
+
+        // Estraggo eventuale header o query param per Company o Department se presente nella request
+        string? companyId = httpContext?.Request.Headers["X-Company-Scope"].ToString();
+        string? departmentId = httpContext?.Request.Headers["X-Department-Scope"].ToString();
+
+        bool hasAccess = await pbacService.HasPermissionAsync(userId, pbacKey, companyId, departmentId);
+        if (hasAccess)
         {
-            return; // Formato permesso non valido
+            context.Succeed(requirement);
         }
+    }
 
-        var applicationName = permissionParts[0];
-        var permissionType = permissionParts[1];
+    private string MapToPbacKey(string permission)
+    {
+        if (permission.Contains(":")) return permission; // già formato PBAC
 
-        // 3. Controllo Override specifico per Utente (ApplicationPermissions funge da override)
-        var userOverride = await dbContext.ApplicationPermissions
-            .FirstOrDefaultAsync(p => p.UserId == userId && p.ApplicationName == applicationName);
+        var parts = permission.Split('.');
+        if (parts.Length != 2) return permission;
 
-        if (userOverride != null)
+        string app = parts[0];
+        string act = parts[1].ToLower();
+
+        return app switch
         {
-            bool hasAccess = permissionType switch
-            {
-                "View" => userOverride.CanView,
-                "Create" => userOverride.CanCreate,
-                "Edit" => userOverride.CanEdit,
-                "Delete" => userOverride.CanDelete,
-                _ => false
-            };
-
-            if (hasAccess)
-            {
-                context.Succeed(requirement);
-            }
-            return; // L'override utente è definitivo, non controlliamo i ruoli
-        }
-
-        // 4. Controllo ereditarietà dai ruoli dell'utente (RolePermissions)
-        var userRoles = context.User.FindAll(ClaimTypes.Role).Select(r => r.Value).ToList();
-        if (userRoles.Any())
-        {
-            var rolePermissions = await dbContext.RolePermissions
-                .Where(p => userRoles.Contains(p.RoleName) && p.ApplicationName == applicationName)
-                .ToListAsync();
-
-            if (rolePermissions.Any())
-            {
-                bool hasAccess = permissionType switch
-                {
-                    "View" => rolePermissions.Any(rp => rp.CanView),
-                    "Create" => rolePermissions.Any(rp => rp.CanCreate),
-                    "Edit" => rolePermissions.Any(rp => rp.CanEdit),
-                    "Delete" => rolePermissions.Any(rp => rp.CanDelete),
-                    _ => false
-                };
-
-                if (hasAccess)
-                {
-                    context.Succeed(requirement);
-                }
-            }
-        }
+            "ConfigurationKiosk" => $"pharmaself:kiosk:{act}",
+            "SkriptkioskChecklist" => $"skript:checklist:{act}",
+            _ => $"{app.ToLower()}:module:{act}"
+        };
     }
 }

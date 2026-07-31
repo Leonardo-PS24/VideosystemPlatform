@@ -66,6 +66,7 @@ builder.Services.AddAuthentication()
 
 // Registra i servizi
 builder.Services.AddScoped<IPermissionService, PermissionService>();
+builder.Services.AddScoped<Platform.Portal.Services.PBAC.IPbacService, Platform.Portal.Services.PBAC.PbacService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IKioskService, KioskService>();
 builder.Services.AddScoped<ISkriptKioskService, SkriptKioskService>();
@@ -103,6 +104,26 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.AccessDeniedPath = "/Account/AccessDenied";
     options.ExpireTimeSpan = TimeSpan.FromHours(8);
     options.SlidingExpiration = true;
+    options.Events.OnRedirectToLogin = context =>
+    {
+        if (context.Request.Path.StartsWithSegments("/api"))
+        {
+            context.Response.StatusCode = Microsoft.AspNetCore.Http.StatusCodes.Status401Unauthorized;
+            return Task.CompletedTask;
+        }
+        context.Response.Redirect(context.RedirectUri);
+        return Task.CompletedTask;
+    };
+    options.Events.OnRedirectToAccessDenied = context =>
+    {
+        if (context.Request.Path.StartsWithSegments("/api"))
+        {
+            context.Response.StatusCode = Microsoft.AspNetCore.Http.StatusCodes.Status403Forbidden;
+            return Task.CompletedTask;
+        }
+        context.Response.Redirect(context.RedirectUri);
+        return Task.CompletedTask;
+    };
 });
 
 // Registra JWT Service
@@ -171,7 +192,17 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-app.MapFallbackToFile("index.html");
+app.MapFallback(context =>
+{
+    var path = context.Request.Path.Value ?? "";
+    if (path.StartsWith("/api") || path.StartsWith("/kioskhub"))
+    {
+        context.Response.StatusCode = Microsoft.AspNetCore.Http.StatusCodes.Status404NotFound;
+        return context.Response.WriteAsJsonAsync(new { message = "Endpoint non trovato o non autorizzato." });
+    }
+    context.Response.ContentType = "text/html";
+    return context.Response.SendFileAsync(System.IO.Path.Combine(app.Environment.WebRootPath, "index.html"));
+});
 
 Log.Information("Platform Portal avviato");
 
